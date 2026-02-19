@@ -315,7 +315,8 @@ export async function renderPolaroidToCanvas(
     // 6. Bottom strip
     const contentCX = CARD_X + CARD_W / 2;
     const SONG_H = 148;   // album art + track + artist
-    const MSG_H = BOTTOM_H - SONG_H;
+    const BOTTOM_PAD = 28;    // padding between song section end and card bottom
+    const MSG_H = BOTTOM_H - SONG_H - BOTTOM_PAD;
 
     // "Hey, Name" — black, bold-feeling, with top padding
     let curContentY = BOTTOM_Y + 22;   // +22 top padding
