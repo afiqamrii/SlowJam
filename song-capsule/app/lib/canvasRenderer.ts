@@ -98,22 +98,26 @@ function drawBackground(ctx: CanvasRenderingContext2D, w: number, h: number) {
     drawGrainTexture(ctx, 0, 0, w, h, 0.012, 0.14);
 }
 
-// ─── TikTok header ────────────────────────────────────────────────────────────
+// ─── Header (TikTok & IG) ─────────────────────────────────────────────────────
 function drawTikTokHeader(ctx: CanvasRenderingContext2D, w: number, topH: number, receiverName?: string, format: ExportFormat = 'tiktok') {
     const cx = w / 2;
-    const label = receiverName
-        ? `Hey ${receiverName}, this one's for you ✦`
-        : `hey, this one's for you ✦`;
+    const line1 = receiverName ? `Hey ${receiverName},` : `Hey,`;
+    const line2 = `this one's for you ✦`;
 
     if (format === 'ig') {
-        // IG: compact single line centred in the small top space
+        // IG: compact two lines in small top space
         ctx.save();
-        ctx.fillStyle = '#4a3426';
-        ctx.font = '30px "Gloria Hallelujah", cursive';
+        ctx.fillStyle = '#1a1410';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.shadowColor = 'rgba(74,52,38,0.10)';
-        ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
-        ctx.fillText(label, cx, topH * 0.52);
+
+        // Line 1
+        ctx.font = '34px "Gloria Hallelujah", cursive';
+        ctx.fillText(line1, cx, topH * 0.42); // Higher up
+
+        // Line 2
+        ctx.font = '28px "Gloria Hallelujah", cursive';
+        ctx.fillText(line2, cx, topH * 0.68); // Lower down
+
         ctx.restore();
         return;
     }
@@ -138,22 +142,29 @@ function drawTikTokHeader(ctx: CanvasRenderingContext2D, w: number, topH: number
 
     // Main label — warm deep brown, handwritten feel
     ctx.save();
-    ctx.fillStyle = '#4a3426';
-    ctx.font = '52px "Gloria Hallelujah", cursive';
+    ctx.fillStyle = '#1a1410'; // Darker for B&W contrast
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(74,52,38,0.12)';
+    ctx.shadowColor = 'rgba(20,20,20,0.12)';
     ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
-    ctx.fillText(label, cx, topH * 0.52);
+
+    // Line 1
+    ctx.font = '48px "Gloria Hallelujah", cursive';
+    ctx.fillText(line1, cx, topH * 0.42);
+
+    // Line 2
+    ctx.font = '38px "Gloria Hallelujah", cursive';
+    ctx.fillText(line2, cx, topH * 0.62);
+
     ctx.restore();
 
-    // Dotted underline
+    // Dotted underline (moved down)
     ctx.save();
-    ctx.strokeStyle = 'rgba(120,90,65,0.28)';
+    ctx.strokeStyle = 'rgba(80,80,80,0.28)';
     ctx.lineWidth = 1.4;
     ctx.setLineDash([5, 8]);
     ctx.beginPath();
-    ctx.moveTo(cx - 210, topH * 0.68);
-    ctx.lineTo(cx + 210, topH * 0.68);
+    ctx.moveTo(cx - 210, topH * 0.78);
+    ctx.lineTo(cx + 210, topH * 0.78);
     ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
 }
@@ -274,7 +285,8 @@ export async function renderPolaroidToCanvas(
 
     // 2. Card position
     const CARD_X = (W - CARD_W) / 2;
-    const CARD_Y = format === 'tiktok' ? 310 : Math.floor((H - CARD_H) / 2) - 20;
+    // IG: 140px top space (pushed down). TikTok: 310px.
+    const CARD_Y = format === 'tiktok' ? 310 : 140;
     const PHOTO_X = CARD_X + SIDE_PAD;
     const PHOTO_Y = CARD_Y + SIDE_PAD;
     const BOTTOM_Y = PHOTO_Y + PHOTO_SIZE;
@@ -309,7 +321,7 @@ export async function renderPolaroidToCanvas(
     ctx.save();
     ctx.beginPath(); ctx.rect(PHOTO_X, PHOTO_Y, PHOTO_SIZE, PHOTO_SIZE); ctx.clip();
     ctx.drawImage(fc, PHOTO_X, PHOTO_Y, PHOTO_SIZE, PHOTO_SIZE);
-    drawGrainTexture(ctx, PHOTO_X, PHOTO_Y, PHOTO_SIZE, PHOTO_SIZE, 0.02, 0.20);
+    drawGrainTexture(ctx, PHOTO_X, PHOTO_Y, PHOTO_SIZE, PHOTO_SIZE, fConfig.grainAmount, 0.20);
     ctx.restore();
 
     // 6. Bottom strip
@@ -328,7 +340,7 @@ export async function renderPolaroidToCanvas(
         ctx.textBaseline = 'top';
         ctx.fillText(`Hey, ${receiverName}`, contentCX, curContentY);
         ctx.restore();
-        curContentY += 48;   // gap between Hey Name and message
+        curContentY += 55;   // gap between Hey Name and message
     }
 
     // Message — bigger font, auto-fit so nothing cuts off

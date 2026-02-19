@@ -40,7 +40,8 @@ export function useCanvasExport(): CanvasExportState {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `slowjam-card-${Date.now()}.png`;
+                        const sanitizedName = (options.receiverName || '').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                        a.download = sanitizedName ? `slow-jam-${sanitizedName}.png` : `slow-jam-${Date.now()}.png`;
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);

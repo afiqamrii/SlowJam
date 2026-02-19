@@ -20,12 +20,12 @@ export interface FilterConfig {
 }
 
 export const DEFAULT_FILTER_CONFIG: FilterConfig = {
-    shadowLift: 28,        // lifts blacks so they never hit 0 → airy look
-    desaturation: 0.12,    // very light desaturation — keeps colours natural
-    contrastFactor: 0.92,  // soft contrast
-    grainAmount: 0.03,     // barely perceptible grain
-    vignetteStrength: 0.22,// gentle corner vignette
-    tint: { r: 220, g: 218, b: 230, strength: 0.06 }, // barely-there cool-neutral
+    shadowLift: 20,        // slightly lifted blacks for vintage B&W
+    desaturation: 1.0,     // full B&W
+    contrastFactor: 1.08,  // good contrast
+    grainAmount: 0.15,     // visible grain
+    vignetteStrength: 0.30,// classic vignette
+    tint: { r: 240, g: 240, b: 240, strength: 0.0 }, // neutral
 };
 
 export function applyVintageFilter(
