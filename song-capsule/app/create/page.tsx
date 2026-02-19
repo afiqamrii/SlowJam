@@ -1,0 +1,509 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, ArrowRight, Calendar, Lock, Check, Copy, Clock, Zap, ChevronLeft } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+
+export default function CreateCapsule() {
+    const router = useRouter();
+    const [step, setStep] = useState(0); // 0: Receiver, 1: Song, 2: Message, 3: Date, 4: Review, 5: Success
+    const [receiverName, setReceiverName] = useState('');
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<any[]>([]);
+    const [selectedTrack, setSelectedTrack] = useState<any>(null);
+    const [message, setMessage] = useState('');
+    const [unlockDate, setUnlockDate] = useState('');
+    const [sendNow, setSendNow] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [capsuleId, setCapsuleId] = useState<string | null>(null);
+
+    // Minimum datetime string for input (now)
+    const nowISOLocal = () => {
+        const now = new Date();
+        now.setSeconds(0, 0);
+        const offset = now.getTimezoneOffset();
+        const local = new Date(now.getTime() - offset * 60000);
+        return local.toISOString().slice(0, 16);
+    };
+
+    // Search Spotify
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (query.length > 2) {
+                setLoading(true);
+                try {
+                    const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(query)}&type=track`);
+                    const data = await res.json();
+                    if (data.tracks) {
+                        setResults(data.tracks.items);
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                setResults([]);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [query]);
+
+    // Validation for Date (Must be in future)
+    const isValidDate = (dateString: string) => {
+        if (!dateString) return false;
+        const selected = new Date(dateString);
+        const now = new Date();
+        return selected > now;
+    };
+
+    const handleSendNow = () => {
+        setSendNow(true);
+        setUnlockDate('');
+        nextStep();
+    };
+
+    const handleDateNext = () => {
+        setSendNow(false);
+        nextStep();
+    };
+
+    const handleSeal = async () => {
+        if (!selectedTrack || !message || (!unlockDate && !sendNow) || !receiverName) return;
+        setLoading(true);
+
+        try {
+            const unlockAt = sendNow
+                ? new Date().toISOString()
+                : new Date(unlockDate).toISOString();
+
+            const { data, error } = await supabase
+                .from('capsules')
+                .insert([
+                    {
+                        receiver_name: receiverName,
+                        spotify_track_id: selectedTrack.id,
+                        track_name: selectedTrack.name,
+                        artist_name: selectedTrack.artists[0].name,
+                        album_art_url: selectedTrack.album.images[0]?.url,
+                        preview_url: selectedTrack.preview_url,
+                        message,
+                        unlock_at: unlockAt,
+                    },
+                ])
+                .select()
+                .single();
+
+            if (error) throw error;
+            setCapsuleId(data.id);
+
+            // Save to localStorage for History page
+            try {
+                const HISTORY_KEY = 'slowjam_history';
+                const existing = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+                const entry = {
+                    id: data.id,
+                    receiver_name: receiverName,
+                    track_name: selectedTrack.name,
+                    artist_name: selectedTrack.artists[0].name,
+                    album_art_url: selectedTrack.album.images[0]?.url,
+                    created_at: new Date().toISOString(),
+                };
+                localStorage.setItem(HISTORY_KEY, JSON.stringify([entry, ...existing].slice(0, 50)));
+            } catch { /* ignore */ }
+
+            nextStep(); // Move to Success Step
+        } catch (error: any) {
+            console.error('Error creating capsule:', error);
+            alert(`Failed to seal: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const copyLink = () => {
+        if (!capsuleId) return;
+        const link = `${window.location.origin}/view/${capsuleId}`;
+        navigator.clipboard.writeText(link);
+        alert('Link copied to clipboard!');
+    };
+
+    const nextStep = () => setStep(s => s + 1);
+    const prevStep = () => setStep(s => s - 1);
+
+    const totalSteps = 5;
+
+    return (
+        <div className="min-h-screen p-6 flex flex-col items-center justify-center font-(--font-gloria) max-w-xl mx-auto text-[var(--foreground)]">
+            {step < totalSteps && (
+                <div className="w-full mb-8 space-y-3">
+                    {/* Progress bar */}
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <motion.div
+                            className="h-full bg-[var(--accent)] rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${((step + 1) / totalSteps) * 100}%` }}
+                            transition={{ duration: 0.4 }}
+                        />
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                            Step {step + 1}/{totalSteps}
+                        </h1>
+                        {step > 0 && (
+                            <button
+                                onClick={prevStep}
+                                className="flex items-center gap-1 text-sm text-gray-500 hover:text-[var(--accent)] transition-colors"
+                            >
+                                <ChevronLeft size={16} /> Back
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            <AnimatePresence mode="wait">
+                {/* Step 0: Who is this for? */}
+                {step === 0 && (
+                    <motion.div
+                        key="step0"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="w-full space-y-6"
+                    >
+                        <h2 className="text-3xl font-bold text-center">Who is this for?</h2>
+                        <input
+                            type="text"
+                            value={receiverName}
+                            onChange={(e) => setReceiverName(e.target.value)}
+                            placeholder="Enter their name..."
+                            className="w-full bg-white border border-[var(--border)] rounded-full py-4 px-6 text-lg text-[var(--foreground)] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] shadow-sm"
+                        />
+                        <button
+                            onClick={nextStep}
+                            disabled={!receiverName.trim()}
+                            className="w-full py-4 bg-[var(--accent)] text-white rounded-full font-bold hover:bg-[#c0684b] disabled:opacity-50 transition-colors"
+                        >
+                            Next
+                        </button>
+                    </motion.div>
+                )}
+
+                {/* Step 1: Pick a Song */}
+                {step === 1 && (
+                    <motion.div
+                        key="step1"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="w-full space-y-6"
+                    >
+                        <h2 className="text-3xl font-bold text-center">Pick a Song</h2>
+                        <div className="relative">
+                            <Search className="absolute left-4 top-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search on Spotify..."
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                className="w-full bg-white border border-[var(--border)] rounded-full py-3 pl-12 pr-4 text-[var(--foreground)] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] shadow-sm"
+                            />
+                        </div>
+
+                        <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                            {loading && <p className="text-center text-gray-400">Searching...</p>}
+                            {results.map((track) => (
+                                <div
+                                    key={track.id}
+                                    onClick={() => {
+                                        setSelectedTrack(track);
+                                        nextStep();
+                                    }}
+                                    className="flex items-center gap-4 p-3 hover:bg-[var(--accent)]/10 rounded-xl cursor-pointer transition-colors bg-white border border-transparent hover:border-[var(--accent)]/20"
+                                >
+                                    <img
+                                        src={track.album.images[2]?.url}
+                                        alt={track.name}
+                                        className="w-12 h-12 rounded-md shadow-sm"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold truncate text-[var(--foreground)]">{track.name}</p>
+                                        <p className="text-sm text-gray-500 truncate">
+                                            {track.artists.map((a: any) => a.name).join(', ')}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Step 2: Write Message */}
+                {step === 2 && (
+                    <motion.div
+                        key="step2"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="w-full space-y-6"
+                    >
+                        <h2 className="text-3xl font-bold text-center">Write a Message</h2>
+                        <textarea
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            placeholder={`Say something to ${receiverName}...`}
+                            maxLength={500}
+                            className="w-full h-64 bg-white border border-[var(--border)] rounded-2xl p-6 text-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] resize-none font-sans shadow-sm"
+                        />
+                        <div className="flex justify-between items-center text-sm text-gray-400">
+                            <span>{message.length}/500</span>
+                            <button
+                                onClick={nextStep}
+                                disabled={!message.trim()}
+                                className="px-8 py-3 bg-[var(--accent)] text-white rounded-full font-bold hover:bg-[#c0684b] disabled:opacity-50 transition-colors"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Step 3: Unlock Date — redesigned */}
+                {step === 3 && (
+                    <motion.div
+                        key="step3"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="w-full space-y-5"
+                    >
+                        <div className="text-center space-y-1">
+                            <h2 className="text-3xl font-bold">When to Open?</h2>
+                            <p className="text-gray-400 font-sans text-sm">Choose when the capsule unlocks, or send right now.</p>
+                        </div>
+
+                        {/* Send Now Card */}
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={handleSendNow}
+                            className="w-full group relative overflow-hidden rounded-2xl border-2 border-[var(--accent-secondary)] bg-gradient-to-br from-[var(--accent-secondary)]/10 to-[var(--accent-secondary)]/5 p-6 text-left transition-all hover:border-[var(--accent-secondary)] hover:shadow-lg"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-[var(--accent-secondary)] flex items-center justify-center shadow-md shrink-0">
+                                    <Zap size={24} className="text-white" fill="white" />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-lg text-[var(--foreground)]">Send Now</p>
+                                    <p className="text-sm text-gray-500 font-sans">Opens immediately — no waiting!</p>
+                                </div>
+                                <ArrowRight size={20} className="ml-auto text-[var(--accent-secondary)] opacity-60 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                        </motion.button>
+
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1 h-px bg-gray-200" />
+                            <span className="text-xs text-gray-400 font-sans uppercase tracking-wider">or schedule it</span>
+                            <div className="flex-1 h-px bg-gray-200" />
+                        </div>
+
+                        {/* Scheduled Date Card */}
+                        <div className="w-full rounded-2xl border-2 border-[var(--border)] bg-white shadow-sm overflow-hidden">
+                            {/* Card header */}
+                            <div className="h-1.5 w-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-secondary)]" />
+                            <div className="p-6 space-y-5">
+                                <div className="flex items-center gap-3 text-[var(--accent)]">
+                                    <Calendar size={22} />
+                                    <span className="font-bold text-base text-[var(--foreground)]">Pick a Date & Time</span>
+                                </div>
+
+                                {/* Date input */}
+                                <div className="space-y-2">
+                                    <label className="text-xs text-gray-400 font-sans uppercase tracking-wider">Date</label>
+                                    <input
+                                        type="date"
+                                        value={unlockDate ? unlockDate.split('T')[0] : ''}
+                                        min={nowISOLocal().split('T')[0]}
+                                        onChange={(e) => {
+                                            const timePart = unlockDate ? unlockDate.split('T')[1] : '12:00';
+                                            setUnlockDate(`${e.target.value}T${timePart || '12:00'}`);
+                                        }}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[var(--foreground)] font-sans focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all"
+                                    />
+                                </div>
+
+                                {/* Time input */}
+                                <div className="space-y-2">
+                                    <label className="text-xs text-gray-400 font-sans uppercase tracking-wider flex items-center gap-1.5">
+                                        <Clock size={12} /> Time
+                                    </label>
+                                    <input
+                                        type="time"
+                                        value={unlockDate ? unlockDate.split('T')[1] : ''}
+                                        onChange={(e) => {
+                                            const datePart = unlockDate ? unlockDate.split('T')[0] : new Date().toISOString().split('T')[0];
+                                            setUnlockDate(`${datePart}T${e.target.value}`);
+                                        }}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[var(--foreground)] font-sans focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all"
+                                    />
+                                </div>
+
+                                {/* Preview / error */}
+                                {unlockDate && (
+                                    <AnimatePresence mode="wait">
+                                        {isValidDate(unlockDate) ? (
+                                            <motion.div
+                                                key="valid"
+                                                initial={{ opacity: 0, y: -4 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -4 }}
+                                                className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-sans"
+                                            >
+                                                <Check size={14} />
+                                                Opens on {new Date(unlockDate).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })}
+                                            </motion.div>
+                                        ) : (
+                                            <motion.div
+                                                key="invalid"
+                                                initial={{ opacity: 0, y: -4 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -4 }}
+                                                className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-sans"
+                                            >
+                                                ⚠️ Please select a future date & time.
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                )}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleDateNext}
+                            disabled={!unlockDate || !isValidDate(unlockDate)}
+                            className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-bold hover:bg-[#c0684b] disabled:opacity-40 transition-colors"
+                        >
+                            Schedule Capsule
+                        </button>
+                    </motion.div>
+                )}
+
+                {/* Step 4: Review */}
+                {step === 4 && (
+                    <motion.div
+                        key="step4"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="w-full space-y-8 flex flex-col items-center"
+                    >
+                        <h2 className="text-3xl font-bold text-center">Ready to Seal?</h2>
+
+                        <div className="flex flex-col items-center gap-4 p-8 bg-white rounded-2xl border border-[var(--border)] w-full shadow-lg relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[var(--accent)] to-[var(--accent-secondary)]" />
+
+                            <p className="text-gray-500 uppercase tracking-widest text-xs">FOR</p>
+                            <p className="text-2xl font-bold -mt-2">{receiverName}</p>
+
+                            <div className="w-16 h-px bg-gray-200 my-2" />
+
+                            <div className="flex items-center gap-4 w-full">
+                                <img src={selectedTrack?.album.images[0]?.url} className="w-16 h-16 rounded-md shadow-sm" />
+                                <div className="text-left">
+                                    <p className="font-bold text-lg leading-tight">{selectedTrack?.name}</p>
+                                    <p className="text-sm text-gray-500">{selectedTrack?.artists[0].name}</p>
+                                </div>
+                            </div>
+
+                            <div className="w-full bg-gray-50 p-4 rounded-lg mt-2 text-sm text-gray-600 italic border border-dashed border-gray-200 relative">
+                                &quot;{message.length > 50 ? message.substring(0, 50) + '...' : message}&quot;
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-2 font-bold">
+                                {sendNow ? (
+                                    <span className="flex items-center gap-2 px-3 py-1.5 bg-[var(--accent-secondary)]/10 text-[var(--accent-secondary)] rounded-full text-sm">
+                                        <Zap size={14} fill="currentColor" /> Opens immediately
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-2 text-[var(--accent-secondary)]">
+                                        <Calendar size={18} />
+                                        {new Date(unlockDate).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleSeal}
+                            disabled={loading}
+                            className="w-full py-4 bg-[var(--accent)] hover:bg-[#c0684b] text-white rounded-full text-xl font-bold shadow-xl hover:scale-105 transition-transform flex justify-center items-center gap-2"
+                        >
+                            {loading ? (
+                                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>
+                                    <Lock size={20} /> Seal &amp; Generate Link
+                                </>
+                            )}
+                        </button>
+
+                        {/* Ad Placeholder */}
+                        <div className="w-full h-24 bg-gray-100 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">
+                            Ad Space
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Step 5: Success & Copy Link */}
+                {step === 5 && (
+                    <motion.div
+                        key="step5"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="w-full flex flex-col items-center text-center gap-6"
+                    >
+                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4">
+                            <Check size={40} strokeWidth={3} />
+                        </div>
+
+                        <h2 className="text-4xl font-bold text-[var(--foreground)]">Capsule Sealed!</h2>
+                        <p className="text-gray-600 text-lg">
+                            It&apos;s ready for <b>{receiverName}</b>.
+                        </p>
+
+                        <div className="w-full bg-white p-2 pl-4 rounded-xl border border-[var(--border)] shadow-sm flex items-center justify-between gap-2 mt-4">
+                            <p className="text-sm text-gray-500 truncate">
+                                {`${typeof window !== 'undefined' ? window.location.origin : ''}/view/${capsuleId}`}
+                            </p>
+                            <button
+                                onClick={copyLink}
+                                className="bg-[var(--accent)] hover:bg-[#c0684b] text-white p-3 rounded-lg transition-colors"
+                            >
+                                <Copy size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex gap-4 w-full mt-4">
+                            <button
+                                onClick={() => router.push(`/view/${capsuleId}`)}
+                                className="flex-1 py-3 border-2 border-[var(--accent)] text-[var(--accent)] rounded-xl font-bold hover:bg-[var(--accent)] hover:text-white transition-colors"
+                            >
+                                View Page
+                            </button>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="flex-1 py-3 bg-[var(--accent-secondary)] text-white rounded-xl font-bold hover:bg-[#7a8966] transition-colors"
+                            >
+                                Create Another
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
