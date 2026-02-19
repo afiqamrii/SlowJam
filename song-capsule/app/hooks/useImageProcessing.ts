@@ -107,8 +107,7 @@ async function processCrop(
                     0, 0, OUTPUT_SIZE, OUTPUT_SIZE
                 );
 
-                // Apply vintage filter
-                applyVintageFilter(ctx, OUTPUT_SIZE, OUTPUT_SIZE, filterConfig);
+                // Filter removed: applyVintageFilter(ctx, OUTPUT_SIZE, OUTPUT_SIZE, filterConfig);
 
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
                 resolve({ dataUrl, canvas });

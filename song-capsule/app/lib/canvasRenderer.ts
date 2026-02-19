@@ -312,16 +312,11 @@ export async function renderPolaroidToCanvas(
     ctx.fillStyle = '#fefcf9'; ctx.fill();
 
     // 5. Photo with filter
-    const fc = document.createElement('canvas');
-    fc.width = fc.height = PHOTO_SIZE;
-    const fctx = fc.getContext('2d')!;
-    fctx.drawImage(croppedImageCanvas, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
-    applyVintageFilter(fctx, PHOTO_SIZE, PHOTO_SIZE, fConfig);
-
+    // 5. Photo (Raw, no filter)
     ctx.save();
     ctx.beginPath(); ctx.rect(PHOTO_X, PHOTO_Y, PHOTO_SIZE, PHOTO_SIZE); ctx.clip();
-    ctx.drawImage(fc, PHOTO_X, PHOTO_Y, PHOTO_SIZE, PHOTO_SIZE);
-    drawGrainTexture(ctx, PHOTO_X, PHOTO_Y, PHOTO_SIZE, PHOTO_SIZE, fConfig.grainAmount, 0.20);
+    // Draw raw cropped image directly
+    ctx.drawImage(croppedImageCanvas, PHOTO_X, PHOTO_Y, PHOTO_SIZE, PHOTO_SIZE);
     ctx.restore();
 
     // 6. Bottom strip
