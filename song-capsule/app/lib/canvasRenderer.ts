@@ -314,7 +314,7 @@ export async function renderPolaroidToCanvas(
 
     // 6. Bottom strip
     const contentCX = CARD_X + CARD_W / 2;
-    const SONG_H = 148;   // album art + track + artist (no Spotify pill)
+    const SONG_H = 168;   // album art + track + artist + breathing room
     const MSG_H = BOTTOM_H - SONG_H;
 
     // "Hey, Name" — black, bold-feeling, with top padding
@@ -327,7 +327,7 @@ export async function renderPolaroidToCanvas(
         ctx.textBaseline = 'top';
         ctx.fillText(`Hey, ${receiverName}`, contentCX, curContentY);
         ctx.restore();
-        curContentY += 52;
+        curContentY += 72;   // gap between Hey Name and message
     }
 
     // Message — bigger font, auto-fit so nothing cuts off
