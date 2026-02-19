@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   icons: {
     icon: "/logo.png",
   },
+  verification: {
+    google: "hEivKR2aEDDOBlY8Ca6MWOiDqTFyJ5atGRyKqmSG2yk",
+  },
 };
 
 import { Toaster } from 'sonner';
