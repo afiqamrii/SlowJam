@@ -16,7 +16,7 @@ export const FORMAT_HEIGHTS: Record<ExportFormat, number> = {
 
 // ─── Card dimensions ──────────────────────────────────────────────────────────
 const CARD_W = 800;
-const CARD_H = 1080;
+const CARD_H = 1160;  // taller card — more bottom strip room
 const CARD_RADIUS = 14;
 const CARD_ROT = 0.007;
 const SIDE_PAD = 52;              // slightly smaller photo → more bottom strip
@@ -200,7 +200,7 @@ async function drawSongSection(
     cx: number, y: number,
     trackName: string, artistName: string, albumArtUrl: string
 ) {
-    let curY = y + 20;  // visual gap between message and song section
+    let curY = y + 32;  // breathing gap between message and song section
 
     // Dotted divider
     ctx.save();
