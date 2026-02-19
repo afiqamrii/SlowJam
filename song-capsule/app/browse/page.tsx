@@ -79,7 +79,7 @@ export default function BrowsePage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-8"
             >
-                <h1 className="text-4xl font-bold text-[var(--foreground)] mb-2">Browse</h1>
+                <h1 className="text-4xl font-bold text-foreground mb-2">Browse</h1>
                 <p className="text-gray-400 font-sans text-sm">
                     Scroll the latest capsules or search by recipient name to find one.
                 </p>
