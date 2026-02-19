@@ -19,7 +19,7 @@ const CARD_W = 800;
 const CARD_H = 1160;  // taller card — more bottom strip room
 const CARD_RADIUS = 14;
 const CARD_ROT = 0.007;
-const SIDE_PAD = 52;              // slightly smaller photo → more bottom strip
+const SIDE_PAD = 35;              // slightly smaller photo → more bottom strip
 const PHOTO_SIZE = CARD_W - SIDE_PAD * 2;  // 724px
 const BOTTOM_H = CARD_H - SIDE_PAD - PHOTO_SIZE;  // ~318px
 
@@ -200,7 +200,7 @@ async function drawSongSection(
     cx: number, y: number,
     trackName: string, artistName: string, albumArtUrl: string
 ) {
-    let curY = y + 32;  // breathing gap between message and song section
+    let curY = y + 14;  // gap between message and song section
 
     // Dotted divider
     ctx.save();
@@ -328,11 +328,12 @@ export async function renderPolaroidToCanvas(
         ctx.textBaseline = 'top';
         ctx.fillText(`Hey, ${receiverName}`, contentCX, curContentY);
         ctx.restore();
-        curContentY += 72;   // gap between Hey Name and message
+        curContentY += 48;   // gap between Hey Name and message
     }
 
     // Message — bigger font, auto-fit so nothing cuts off
-    const msgMaxW = CARD_W - SIDE_PAD * 2 - 8;
+    // Narrower wrap width → shorter lines, centering clearly visible (like handwritten note)
+    const msgMaxW = CARD_W - SIDE_PAD * 2 - 108;
     const msgAvailH = (BOTTOM_Y + MSG_H) - curContentY - 8;
 
     ctx.save();
