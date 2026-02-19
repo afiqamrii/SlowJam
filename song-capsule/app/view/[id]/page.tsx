@@ -152,8 +152,8 @@ export default function ViewCapsule() {
         });
     }, [imgProc.processedCanvas, capsule, exportPNG, format]);
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-(--font-gloria) text-[var(--foreground)]">Loading capsule...</div>;
-    if (!capsule) return <div className="min-h-screen flex items-center justify-center font-(--font-gloria) text-[var(--foreground)]">Capsule not found.</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-(--font-gloria) text-foreground">Loading capsule...</div>;
+    if (!capsule) return <div className="min-h-screen flex items-center justify-center font-(--font-gloria) text-foreground">Capsule not found.</div>;
 
     const hasPreview = capsule.preview_url && capsule.preview_url.trim() !== '';
     const hasSpotifyId = capsule.spotify_track_id && capsule.spotify_track_id.trim() !== '';

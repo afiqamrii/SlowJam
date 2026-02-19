@@ -1,11 +1,5 @@
-
 import { NextResponse } from 'next/server';
-import SpotifyWebApi from 'spotify-web-api-node';
-
-const spotifyApi = new SpotifyWebApi({
-    clientId: process.env.SPOTIFY_CLIENT_ID,
-    clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-});
+import { spotifyApi, ensureAccessToken } from '@/app/lib/spotifyAuth';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -17,9 +11,8 @@ export async function GET(request: Request) {
     }
 
     try {
-        // Client Credentials Flow
-        const data = await spotifyApi.clientCredentialsGrant();
-        spotifyApi.setAccessToken(data.body['access_token']);
+        // Ensure we have a valid token (cached if possible)
+        await ensureAccessToken();
 
         let searchResults;
         if (type === 'track') {

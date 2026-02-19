@@ -102,7 +102,7 @@ export default function BrowsePage() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search by recipient name..."
-                    className="w-full bg-white border border-gray-200 rounded-full py-3.5 pl-11 pr-5 font-sans text-sm text-[var(--foreground)] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] shadow-sm"
+                    className="w-full bg-white border border-gray-200 rounded-full py-3.5 pl-11 pr-5 font-sans text-sm text-foreground placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] shadow-sm"
                 />
             </div>
 
@@ -134,7 +134,7 @@ export default function BrowsePage() {
                                         layout
                                     >
                                         <Link href={`/view/${capsule.id}`} className="block h-full">
-                                            <div className="h-full bg-white border border-gray-100 hover:border-[var(--accent)]/30 hover:shadow-lg shadow-sm rounded-2xl overflow-hidden flex flex-col transition-all group">
+                                            <div className="h-full bg-white border border-gray-100 hover:border-(--accent)/30 hover:shadow-lg shadow-sm rounded-2xl overflow-hidden flex flex-col transition-all group">
                                                 {/* Card body */}
                                                 <div className="flex-1 p-5 space-y-3">
                                                     {/* To: badge */}
@@ -152,7 +152,7 @@ export default function BrowsePage() {
                                                             </p>
                                                         </div>
                                                     ) : (
-                                                        <p className="text-[var(--foreground)] leading-snug line-clamp-3">
+                                                        <p className="text-foreground leading-snug line-clamp-3">
                                                             {capsule.message}
                                                         </p>
                                                     )}
