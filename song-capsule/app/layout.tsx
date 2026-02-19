@@ -11,8 +11,11 @@ const gloria = Gloria_Hallelujah({
 });
 
 export const metadata: Metadata = {
-  title: "SlowJam",
+  title: "SlowJam - Send a song to the future",
   description: "Send a song to the future.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 import { Toaster } from 'sonner';
