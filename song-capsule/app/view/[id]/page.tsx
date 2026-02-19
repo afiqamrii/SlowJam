@@ -14,6 +14,7 @@ export default function ViewCapsule() {
     const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [isUnlocked, setIsUnlocked] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [autoplayBlocked, setAutoplayBlocked] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
@@ -39,6 +40,12 @@ export default function ViewCapsule() {
                 console.error('Error fetching capsule:', error);
             } else {
                 setCapsule(data);
+                // Check unlock status immediately to prevent flash of locked state
+                const now = new Date().getTime();
+                const unlockTime = new Date(data.unlock_at).getTime();
+                if (unlockTime <= now) {
+                    setIsUnlocked(true);
+                }
             }
             setLoading(false);
         };
@@ -49,7 +56,7 @@ export default function ViewCapsule() {
     useEffect(() => {
         if (!capsule) return;
 
-        const interval = setInterval(() => {
+        const checkTime = () => {
             const now = new Date().getTime();
             const unlockTime = new Date(capsule.unlock_at).getTime();
             const distance = unlockTime - now;
@@ -57,7 +64,7 @@ export default function ViewCapsule() {
             if (distance < 0) {
                 setIsUnlocked(true);
                 setTimeLeft(null);
-                clearInterval(interval);
+                return true; // clear interval signal
             } else {
                 setIsUnlocked(false);
                 setTimeLeft({
@@ -66,11 +73,36 @@ export default function ViewCapsule() {
                     minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
                     seconds: Math.floor((distance % (1000 * 60)) / 1000),
                 });
+                return false;
+            }
+        };
+
+        // Run immediately to avoid 1s delay
+        if (checkTime()) return;
+
+        const interval = setInterval(() => {
+            if (checkTime()) {
+                clearInterval(interval);
             }
         }, 1000);
 
         return () => clearInterval(interval);
     }, [capsule]);
+
+    // Auto-play when the capsule becomes unlocked
+    useEffect(() => {
+        if (!isUnlocked || !audioRef.current) return;
+        const audio = audioRef.current;
+        audio.play()
+            .then(() => {
+                setIsPlaying(true);
+                setAutoplayBlocked(false);
+            })
+            .catch(() => {
+                // Browser blocked autoplay — show a tap-to-play prompt
+                setAutoplayBlocked(true);
+            });
+    }, [isUnlocked]);
 
     const togglePlay = () => {
         if (!audioRef.current) return;
@@ -79,6 +111,7 @@ export default function ViewCapsule() {
         } else {
             audioRef.current.play();
         }
+        setAutoplayBlocked(false);
         setIsPlaying(!isPlaying);
     };
 
@@ -134,13 +167,13 @@ export default function ViewCapsule() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="space-y-8 max-w-lg w-full"
+                    className="space-y-8 w-[80%] max-w-3xl"
                 >
                     <Confetti
                         width={windowSize.width}
                         height={windowSize.height}
                         recycle={false}
-                        numberOfPieces={500}
+                        numberOfPieces={1000}
                         gravity={0.15}
                     />
                     {/* Greeting */}
@@ -205,6 +238,25 @@ export default function ViewCapsule() {
                                 </>
                             )}
 
+                            {/* Tap-to-play overlay — shown when browser blocked autoplay */}
+                            {autoplayBlocked && hasPreview && (
+                                <motion.button
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    onClick={togglePlay}
+                                    className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm cursor-pointer z-20"
+                                >
+                                    <motion.div
+                                        animate={{ scale: [1, 1.12, 1] }}
+                                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                                        className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl mb-3"
+                                    >
+                                        <Play size={36} fill="#5c4033" className="ml-1 text-[#5c4033]" />
+                                    </motion.div>
+                                    <p className="text-white text-sm font-sans tracking-widest uppercase opacity-80">Tap to play</p>
+                                </motion.button>
+                            )}
+
                             {/* Spinning vinyl ring — subtle, only when playing */}
                             {isPlaying && (
                                 <motion.div
@@ -251,10 +303,17 @@ export default function ViewCapsule() {
                     </motion.div>
 
                     {/* Message Card */}
-                    <div className="bg-white p-6 rounded-2xl border border-[var(--border)] shadow-md relative">
-                        <span className="absolute -top-3 -left-2 text-4xl text-[var(--accent)]">&ldquo;</span>
-                        <p className="text-xl leading-relaxed text-[var(--foreground)]">{capsule.message}</p>
-                        <span className="absolute -bottom-6 -right-2 text-4xl text-[var(--accent)]">&rdquo;</span>
+                    <div className="bg-[#fdf6ee] p-8 rounded-2xl border border-[var(--border)] shadow-md relative">
+                        <span className="absolute -top-5 left-4 text-7xl leading-none text-[var(--accent)] opacity-30 font-serif select-none">&ldquo;</span>
+                        <p className="relative z-10 text-2xl leading-relaxed text-[var(--foreground)] min-h-24 whitespace-pre-wrap font-(--font-gloria)">
+                            {capsule.message}
+                        </p>
+                        <span className="absolute -bottom-8 right-4 text-7xl leading-none text-[var(--accent)] opacity-30 font-serif select-none">&rdquo;</span>
+                        {capsule.sender_name && (
+                            <p className="mt-6 text-right text-sm text-gray-400 font-sans tracking-wide">
+                                — {capsule.sender_name}
+                            </p>
+                        )}
                     </div>
                 </motion.div>
             )}
