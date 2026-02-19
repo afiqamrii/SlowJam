@@ -121,18 +121,19 @@ export default function ViewCapsule() {
     const hasPreview = capsule.preview_url && capsule.preview_url.trim() !== '';
     const hasSpotifyId = capsule.spotify_track_id && capsule.spotify_track_id.trim() !== '';
 
+    // ... existing code ...
     return (
-        <div className="min-h-screen px-6 py-12 flex flex-col items-center justify-start sm:justify-center font-(--font-gloria) text-center text-[var(--foreground)]">
+        <div className="min-h-screen px-4 md:px-6 py-12 flex flex-col items-center justify-start sm:justify-center font-(--font-gloria) text-center text-foreground">
             {!isUnlocked ? (
                 // ─── Locked State ───────────────────────────────────────────────
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="space-y-8 max-w-md w-full bg-white p-8 rounded-3xl border border-[var(--border)] shadow-xl relative overflow-hidden"
+                    className="space-y-8 max-w-md w-full bg-white p-8 rounded-3xl border border-border shadow-xl relative overflow-hidden"
                 >
                     <div className="absolute top-0 left-0 w-full h-2 bg-accent" />
 
-                    <div className="w-20 h-20 bg-(--accent)/10 rounded-full flex items-center justify-center mx-auto text-[var(--accent)]">
+                    <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto text-accent">
                         <Lock size={40} />
                     </div>
 
@@ -150,8 +151,8 @@ export default function ViewCapsule() {
                         ))}
                     </div>
 
-                    <div className="bg-(--accent)/5 py-3 px-4 rounded-lg border border-[var(--accent)]/20">
-                        <p className="text-[var(--accent)] text-sm">
+                    <div className="bg-accent/5 py-3 px-4 rounded-lg border border-accent/20">
+                        <p className="text-accent text-sm">
                             Opens on {new Date(capsule.unlock_at).toLocaleString()}
                         </p>
                     </div>
@@ -167,7 +168,7 @@ export default function ViewCapsule() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="space-y-8 w-[80%] max-w-3xl"
+                    className="space-y-8 w-[95%] md:w-[80%] max-w-3xl"
                 >
                     <Confetti
                         width={windowSize.width}
@@ -178,7 +179,7 @@ export default function ViewCapsule() {
                     />
                     {/* Greeting */}
                     <div className="text-center space-y-2">
-                        <p className="text-4xl font-bold font-sans">
+                        <p className="text-3xl md:text-4xl font-bold font-sans">
                             Hello, <span className="font-(--font-gloria)">{capsule.receiver_name || 'Friend'}</span>
                         </p>
                         <p className="text-gray-500 text-base font-sans">
@@ -208,7 +209,7 @@ export default function ViewCapsule() {
                             )}
 
                             {/* Dark gradient overlay at bottom for text legibility */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
 
                             {/* Track info pinned to bottom of image */}
                             <div className="absolute bottom-0 left-0 right-0 p-6 text-left">
@@ -303,12 +304,12 @@ export default function ViewCapsule() {
                     </motion.div>
 
                     {/* Message Card */}
-                    <div className="bg-[#fdf6ee] p-8 rounded-2xl border border-[var(--border)] shadow-md relative">
-                        <span className="absolute -top-5 left-4 text-7xl leading-none text-[var(--accent)] opacity-30 font-serif select-none">&ldquo;</span>
-                        <p className="relative z-10 text-2xl leading-relaxed text-[var(--foreground)] min-h-24 whitespace-pre-wrap font-(--font-gloria)">
+                    <div className="bg-[#fdf6ee] p-5 md:p-8 rounded-2xl border border-border shadow-md relative">
+                        <span className="absolute -top-5 left-4 text-7xl leading-none text-accent opacity-30 font-serif select-none">&ldquo;</span>
+                        <p className="relative z-10 text-lg md:text-2xl leading-relaxed text-foreground min-h-24 whitespace-pre-wrap font-(--font-gloria)">
                             {capsule.message}
                         </p>
-                        <span className="absolute -bottom-8 right-4 text-7xl leading-none text-[var(--accent)] opacity-30 font-serif select-none">&rdquo;</span>
+                        <span className="absolute -bottom-8 right-4 text-7xl leading-none text-accent opacity-30 font-serif select-none">&rdquo;</span>
                         {capsule.sender_name && (
                             <p className="mt-6 text-right text-sm text-gray-400 font-sans tracking-wide">
                                 — {capsule.sender_name}
