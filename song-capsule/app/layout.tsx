@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: "Send a song to the future.",
 };
 
+import { Toaster } from 'sonner';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,12 +24,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${gloria.variable} antialiased selection:bg-purple-500 selection:text-white min-h-screen flex flex-col`}>
+      <body className={`${gloria.variable} font-sans antialiased text-[var(--foreground)] bg-[var(--background)]`}>
         <Navbar />
-        <main className="flex-1">
+        <main className="flex-1 pt-14">
           {children}
         </main>
         <Footer />
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );

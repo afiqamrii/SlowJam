@@ -8,7 +8,7 @@ import { X, Mail, Send, Menu } from 'lucide-react';
 import GradientText from './GradientText';
 
 const NAV_LINKS = [
-    { label: 'Submit', href: '/create' },
+    { label: 'Create', href: '/create' },
     { label: 'Browse', href: '/browse' },
     { label: 'History', href: '/history' },
 ];
@@ -100,8 +100,8 @@ export default function Navbar() {
                                         href={link.href}
                                         onClick={() => setMobileOpen(false)}
                                         className={`px-3 py-2 rounded-lg text-sm font-sans font-medium transition-colors ${pathname === link.href
-                                                ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                                                : 'text-gray-600 hover:bg-gray-50'
+                                            ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                                            : 'text-gray-600 hover:bg-gray-50'
                                             }`}
                                     >
                                         {link.label}

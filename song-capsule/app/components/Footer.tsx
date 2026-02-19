@@ -1,5 +1,6 @@
 'use client';
 
+import { Heart } from 'lucide-react';
 import GradientText from './GradientText';
 
 export default function Footer() {
@@ -16,10 +17,12 @@ export default function Footer() {
                     </GradientText>
                     <span>— send a song to the future.</span>
                 </div>
-                <div className="flex items-center gap-4">
-                    <span>© {new Date().getFullYear()} SlowJam</span>
-                    <span className="text-gray-200">|</span>
-                    <span>Capsules are permanent — think before you send 💌</span>
+                <div className="flex flex-col items-center sm:items-end gap-0.5 text-center sm:text-right">
+                    <span>
+                        © {new Date().getFullYear()} Song Capsule — made with{' '}
+                        <Heart size={11} className="inline text-[#d97757]" fill="#d97757" /> for the music lovers.
+                    </span>
+                    <span className="text-[#d97757] font-medium">@by Afiq Amri</span>
                 </div>
             </div>
         </footer>

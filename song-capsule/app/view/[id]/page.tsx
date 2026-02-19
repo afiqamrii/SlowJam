@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
-import { Lock, Play, Pause, ExternalLink, Music2 } from 'lucide-react';
+import { Lock, Play, Pause, ExternalLink, Music2, Clock } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import Confetti from 'react-confetti';
 
 export default function ViewCapsule() {
     const { id } = useParams();
@@ -14,6 +15,16 @@ export default function ViewCapsule() {
     const [isUnlocked, setIsUnlocked] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         const fetchCapsule = async () => {
@@ -78,7 +89,7 @@ export default function ViewCapsule() {
     const hasSpotifyId = capsule.spotify_track_id && capsule.spotify_track_id.trim() !== '';
 
     return (
-        <div className="min-h-screen p-6 flex flex-col items-center justify-center font-(--font-gloria) text-center text-[var(--foreground)]">
+        <div className="min-h-screen px-6 py-12 flex flex-col items-center justify-start sm:justify-center font-(--font-gloria) text-center text-[var(--foreground)]">
             {!isUnlocked ? (
                 // ─── Locked State ───────────────────────────────────────────────
                 <motion.div
@@ -86,9 +97,9 @@ export default function ViewCapsule() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="space-y-8 max-w-md w-full bg-white p-8 rounded-3xl border border-[var(--border)] shadow-xl relative overflow-hidden"
                 >
-                    <div className="absolute top-0 left-0 w-full h-2 bg-[var(--accent)]" />
+                    <div className="absolute top-0 left-0 w-full h-2 bg-accent" />
 
-                    <div className="w-20 h-20 bg-[var(--accent)]/10 rounded-full flex items-center justify-center mx-auto text-[var(--accent)]">
+                    <div className="w-20 h-20 bg-(--accent)/10 rounded-full flex items-center justify-center mx-auto text-[var(--accent)]">
                         <Lock size={40} />
                     </div>
 
@@ -100,20 +111,22 @@ export default function ViewCapsule() {
                     <div className="grid grid-cols-4 gap-4 text-center">
                         {timeLeft && Object.entries(timeLeft).map(([label, value]) => (
                             <div key={label} className="flex flex-col p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                <span className="text-2xl font-bold text-[var(--foreground)]">{value}</span>
+                                <span className="text-2xl font-bold text-foreground">{value}</span>
                                 <span className="text-[10px] uppercase text-gray-400 font-sans tracking-wider">{label}</span>
                             </div>
                         ))}
                     </div>
 
-                    <div className="bg-[var(--accent)]/5 py-3 px-4 rounded-lg border border-[var(--accent)]/20">
+                    <div className="bg-(--accent)/5 py-3 px-4 rounded-lg border border-[var(--accent)]/20">
                         <p className="text-[var(--accent)] text-sm">
                             Opens on {new Date(capsule.unlock_at).toLocaleString()}
                         </p>
                     </div>
 
-                    <div className="w-full h-20 bg-gray-50 rounded-lg border border-dashed border-gray-200 flex items-center justify-center text-gray-400 text-sm">
-                        Ad Space
+                    {/* Enhanced Locked Visuals */}
+                    <div className="flex flex-col items-center gap-2 text-gray-400 mt-4">
+                        <Clock size={20} className="animate-bounce opacity-50" />
+                        <p className="text-xs font-sans uppercase tracking-widest">Time traveling...</p>
                     </div>
                 </motion.div>
             ) : (
@@ -123,6 +136,13 @@ export default function ViewCapsule() {
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-8 max-w-lg w-full"
                 >
+                    <Confetti
+                        width={windowSize.width}
+                        height={windowSize.height}
+                        recycle={false}
+                        numberOfPieces={500}
+                        gravity={0.15}
+                    />
                     {/* Greeting */}
                     <div className="text-center space-y-2">
                         <p className="text-4xl font-bold font-sans">
@@ -235,11 +255,6 @@ export default function ViewCapsule() {
                         <span className="absolute -top-3 -left-2 text-4xl text-[var(--accent)]">&ldquo;</span>
                         <p className="text-xl leading-relaxed text-[var(--foreground)]">{capsule.message}</p>
                         <span className="absolute -bottom-6 -right-2 text-4xl text-[var(--accent)]">&rdquo;</span>
-                    </div>
-
-                    {/* Ad Placeholder */}
-                    <div className="w-full h-20 bg-gray-50 rounded-lg border border-dashed border-gray-200 flex items-center justify-center text-gray-400 text-sm">
-                        Ad Space
                     </div>
                 </motion.div>
             )}

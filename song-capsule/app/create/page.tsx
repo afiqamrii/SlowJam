@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ArrowRight, Calendar, Lock, Check, Copy, Clock, Zap, ChevronLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import Confetti from 'react-confetti';
 
 export default function CreateCapsule() {
     const router = useRouter();
@@ -18,7 +20,19 @@ export default function CreateCapsule() {
     const [sendNow, setSendNow] = useState(false);
     const [loading, setLoading] = useState(false);
     const [capsuleId, setCapsuleId] = useState<string | null>(null);
+    const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+        };
+
+        // Initial size
+        handleResize();
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
     // Minimum datetime string for input (now)
     const nowISOLocal = () => {
         const now = new Date();
@@ -118,7 +132,7 @@ export default function CreateCapsule() {
             nextStep(); // Move to Success Step
         } catch (error: any) {
             console.error('Error creating capsule:', error);
-            alert(`Failed to seal: ${error.message}`);
+            toast.error(`Failed to seal: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -128,7 +142,7 @@ export default function CreateCapsule() {
         if (!capsuleId) return;
         const link = `${window.location.origin}/view/${capsuleId}`;
         navigator.clipboard.writeText(link);
-        alert('Link copied to clipboard!');
+        toast.success('Link copied to clipboard!');
     };
 
     const nextStep = () => setStep(s => s + 1);
@@ -387,7 +401,7 @@ export default function CreateCapsule() {
                             disabled={!unlockDate || !isValidDate(unlockDate)}
                             className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-bold hover:bg-[#c0684b] disabled:opacity-40 transition-colors"
                         >
-                            Schedule Capsule
+                            Schedule Message
                         </button>
                     </motion.div>
                 )}
@@ -446,62 +460,66 @@ export default function CreateCapsule() {
                                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
                                 <>
-                                    <Lock size={20} /> Seal &amp; Generate Link
+                                    <Lock size={20} /> {sendNow ? 'Send & Generate Link' : 'Seal & Generate Link'}
                                 </>
                             )}
                         </button>
-
-                        {/* Ad Placeholder */}
-                        <div className="w-full h-24 bg-gray-100 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">
-                            Ad Space
-                        </div>
                     </motion.div>
                 )}
 
                 {/* Step 5: Success & Copy Link */}
                 {step === 5 && (
-                    <motion.div
-                        key="step5"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="w-full flex flex-col items-center text-center gap-6"
-                    >
-                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4">
-                            <Check size={40} strokeWidth={3} />
-                        </div>
+                    <>
+                        <Confetti
+                            width={typeof window !== 'undefined' ? window.innerWidth : 300}
+                            height={typeof window !== 'undefined' ? window.innerHeight : 200}
+                            recycle={false}
+                            numberOfPieces={500}
+                            gravity={0.15}
+                        />
+                        <motion.div
+                            key="step5"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="w-full flex flex-col items-center text-center gap-6"
+                        >
+                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4">
+                                <Check size={40} strokeWidth={3} />
+                            </div>
 
-                        <h2 className="text-4xl font-bold text-[var(--foreground)]">Capsule Sealed!</h2>
-                        <p className="text-gray-600 text-lg">
-                            It&apos;s ready for <b>{receiverName}</b>.
-                        </p>
-
-                        <div className="w-full bg-white p-2 pl-4 rounded-xl border border-[var(--border)] shadow-sm flex items-center justify-between gap-2 mt-4">
-                            <p className="text-sm text-gray-500 truncate">
-                                {`${typeof window !== 'undefined' ? window.location.origin : ''}/view/${capsuleId}`}
+                            <h2 className="text-4xl font-bold text-[var(--foreground)]">Capsule Sealed!</h2>
+                            <p className="text-gray-600 text-lg">
+                                It&apos;s ready for <b>{receiverName}</b>.
                             </p>
-                            <button
-                                onClick={copyLink}
-                                className="bg-[var(--accent)] hover:bg-[#c0684b] text-white p-3 rounded-lg transition-colors"
-                            >
-                                <Copy size={20} />
-                            </button>
-                        </div>
 
-                        <div className="flex gap-4 w-full mt-4">
-                            <button
-                                onClick={() => router.push(`/view/${capsuleId}`)}
-                                className="flex-1 py-3 border-2 border-[var(--accent)] text-[var(--accent)] rounded-xl font-bold hover:bg-[var(--accent)] hover:text-white transition-colors"
-                            >
-                                View Page
-                            </button>
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="flex-1 py-3 bg-[var(--accent-secondary)] text-white rounded-xl font-bold hover:bg-[#7a8966] transition-colors"
-                            >
-                                Create Another
-                            </button>
-                        </div>
-                    </motion.div>
+                            <div className="w-full bg-white p-2 pl-4 rounded-xl border border-[var(--border)] shadow-sm flex items-center justify-between gap-2 mt-4">
+                                <p className="text-sm text-gray-500 truncate">
+                                    {`${typeof window !== 'undefined' ? window.location.origin : ''}/view/${capsuleId}`}
+                                </p>
+                                <button
+                                    onClick={copyLink}
+                                    className="bg-[var(--accent)] hover:bg-[#c0684b] text-white p-3 rounded-lg transition-colors"
+                                >
+                                    <Copy size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex gap-4 w-full mt-4">
+                                <button
+                                    onClick={() => router.push(`/view/${capsuleId}`)}
+                                    className="flex-1 py-3 border-2 border-[var(--accent)] text-[var(--accent)] rounded-xl font-bold hover:bg-[var(--accent)] hover:text-white transition-colors"
+                                >
+                                    View Page
+                                </button>
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="flex-1 py-3 bg-[var(--accent-secondary)] text-white rounded-xl font-bold hover:bg-[#7a8966] transition-colors"
+                                >
+                                    Create Another
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
                 )}
             </AnimatePresence>
         </div>
