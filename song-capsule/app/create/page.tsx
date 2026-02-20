@@ -94,6 +94,30 @@ export default function CreateCapsule() {
                 ? new Date().toISOString()
                 : new Date(unlockDate).toISOString();
 
+            // Attempt to get AI meaning (fails gracefully)
+            let aiMeaning = null;
+            try {
+                const aiRes = await fetch('/api/generate-meaning', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        trackName: selectedTrack.name,
+                        artistName: selectedTrack.artists[0]?.name,
+                        message: message,
+                        senderName: '', // Could grab from somewhere if we stored it
+                        receiverName: receiverName,
+                    }),
+                });
+                if (aiRes.ok) {
+                    const aiData = await aiRes.json();
+                    if (aiData.meaning) {
+                        aiMeaning = aiData.meaning;
+                    }
+                }
+            } catch (aiErr) {
+                console.warn('AI generation skipped/failed:', aiErr);
+            }
+
             const { data, error } = await supabase
                 .from('capsules')
                 .insert([
@@ -105,6 +129,7 @@ export default function CreateCapsule() {
                         album_art_url: selectedTrack.album.images[0]?.url,
                         preview_url: selectedTrack.preview_url,
                         message,
+                        song_meaning: aiMeaning,
                         unlock_at: unlockAt,
                     },
                 ])
@@ -476,7 +501,7 @@ export default function CreateCapsule() {
                             recycle={false}
                             numberOfPieces={500}
                             gravity={0.15}
-                            style={{ position: 'fixed', top: 0, left: 0, zIndex: 100, pointerEvents: 'none' }}
+                            style={{ position: 'fixed', top: '56px', left: 0, zIndex: 100, pointerEvents: 'none' }}
                         />
                         <motion.div
                             key="step5"

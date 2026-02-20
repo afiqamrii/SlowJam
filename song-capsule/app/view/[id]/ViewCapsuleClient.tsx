@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Play, Pause, ExternalLink, Music2, Clock, Camera, ChevronDown, ChevronUp } from 'lucide-react';
 import Confetti from 'react-confetti';
+import ReactMarkdown from 'react-markdown';
 
 // ── Polaroid imports ────────────────────────────────────────────────────────
 import ImageCropper from '@/app/components/polaroid/ImageCropper';
@@ -144,7 +145,7 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
     const hasSpotifyId = capsule.spotify_track_id && capsule.spotify_track_id.trim() !== '';
 
     return (
-        <div className="min-h-screen px-2 md:px-6 py-12 flex flex-col items-center justify-start sm:justify-center font-(--font-gloria) text-center text-foreground">
+        <div className="min-h-screen px-3 md:px-6 py-12 flex flex-col items-center justify-start sm:justify-center font-(--font-gloria) text-center text-foreground">
             {!isUnlocked ? (
                 // ─── Locked State ───────────────────────────────────────────────
                 <motion.div
@@ -192,7 +193,7 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                         recycle={false}
                         numberOfPieces={1000}
                         gravity={0.15}
-                        style={{ position: 'fixed', top: 0, left: 0, zIndex: 100, pointerEvents: 'none' }}
+                        style={{ position: 'fixed', top: '56px', left: 0, zIndex: 100, pointerEvents: 'none' }}
                     />
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -330,6 +331,41 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                                 </p>
                             )}
                         </div>
+
+                        {/* Song Meaning (AI generated) */}
+                        {capsule.song_meaning && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 16 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 }}
+                                className="bg-gradient-to-br from-[#E6E6FA]/40 to-[#F0E6FA]/40 p-5 md:p-6 rounded-2xl border border-[#D8BFD8]/50 shadow-sm relative overflow-hidden text-left"
+                            >
+                                <div className="absolute top-0 right-0 p-4 opacity-10">
+                                    <svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor" className="text-purple-600">
+                                        <path d="M12 2L9.5 9.5L2 12L9.5 14.5L12 22L14.5 14.5L22 12L14.5 9.5L12 2Z" />
+                                    </svg>
+                                </div>
+                                <div className="flex items-center justify-center gap-2 mb-4">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="text-purple-500">
+                                        <path d="M12 2L9.5 9.5L2 12L9.5 14.5L12 22L14.5 14.5L22 12L14.5 9.5L12 2ZM20 20L18 18L16 20L18 22L20 20Z" />
+                                    </svg>
+                                    <p className="text-lg md:text-xl font-bold text-purple-800/90 tracking-wide font-(--font-gloria)">
+                                        Story behind the song
+                                    </p>
+                                </div>
+                                <div className="text-base md:text-lg text-gray-700 leading-relaxed font-(--font-gloria) whitespace-pre-wrap relative z-10 text-center flex flex-col gap-6">
+                                    {capsule.song_meaning ? capsule.song_meaning.split('\n\n').map((paragraph: string, index: number, arr: string[]) => (
+                                        <div key={index} className={index === arr.length - 1 && arr.length > 1 ? "font-bold text-sm md:text-base" : ""}>
+                                            <div className="inline-block">
+                                                <ReactMarkdown>
+                                                    {paragraph.replace(/(?:\n|^)-\s*/g, '\n').trim()}
+                                                </ReactMarkdown>
+                                            </div>
+                                        </div>
+                                    )) : null}
+                                </div>
+                            </motion.div>
+                        )}
 
                         {/* ═══════════════════════════════════════════════════════════
                         POLAROID CARD GENERATOR

@@ -16,10 +16,10 @@ export async function GET(request: Request) {
 
         let searchResults;
         if (type === 'track') {
-            searchResults = await spotifyApi.searchTracks(query);
+            searchResults = await spotifyApi.searchTracks(query, { limit: 10 });
         } else {
             // fallback or extend later
-            searchResults = await spotifyApi.searchTracks(query);
+            searchResults = await spotifyApi.searchTracks(query, { limit: 10 });
         }
 
         return NextResponse.json(searchResults.body);
