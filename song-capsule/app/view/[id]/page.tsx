@@ -36,13 +36,35 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     const receiver = capsule.receiver_name || 'You';
     const track = capsule.track_name || 'a song';
 
+    const appUrl = 'https://slowjam.xyz';
+    const imageUrl = capsule.album_art_url || `${appUrl}/logo.png`;
+
+    const title = `SlowJam - Express Your Feelings Through Music | Musical Messages`;
+    const description = `A song for ${receiver} ✦\n${sender} sent you a song capsule. Send meaningful songs to friends and loved ones. Share emotions through music, create dedications, and express.`;
+
     return {
-        title: `A song for ${receiver} | SlowJam`,
-        description: `${sender} sent you "${track}". Open your time capsule to listen.`,
+        title: title,
+        description: description,
         openGraph: {
-            title: `A song for ${receiver} ✦`,
-            description: `${sender} sent you a song capsule.`,
-            images: [capsule.album_art_url || '/content/slowjam_logo.png'],
+            title: title,
+            description: description,
+            url: `${appUrl}/view/${params.id}`,
+            siteName: 'SlowJam',
+            images: [
+                {
+                    url: imageUrl,
+                    width: 1200,
+                    height: 630,
+                    alt: 'Album Art',
+                },
+            ],
+            type: 'website',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: title,
+            description: description,
+            images: [imageUrl],
         },
     };
 }

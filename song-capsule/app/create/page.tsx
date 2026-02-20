@@ -476,6 +476,7 @@ export default function CreateCapsule() {
                             recycle={false}
                             numberOfPieces={500}
                             gravity={0.15}
+                            style={{ position: 'fixed', top: 0, left: 0, zIndex: 100, pointerEvents: 'none' }}
                         />
                         <motion.div
                             key="step5"
