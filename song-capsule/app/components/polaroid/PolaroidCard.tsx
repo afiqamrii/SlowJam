@@ -50,6 +50,7 @@ export default function PolaroidCard({
 }: PolaroidCardProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [rendering, setRendering] = useState(false);
+    const [imgSrc, setImgSrc] = useState<string | null>(null);
 
     const exportH = FORMAT_HEIGHTS[format];
     const previewH = exportH * (PREVIEW_W / EXPORT_WIDTH);
@@ -68,7 +69,14 @@ export default function PolaroidCard({
             message: message || '',
             receiverName,
             format,
-        }).then(() => { if (!cancelled) setRendering(false); })
+        }).then(() => {
+            if (!cancelled && canvasRef.current) {
+                // High-DPI screens on iOS/Mac Safari use awful nearest-neighbor scaling for live <canvas> elements.
+                // Converting the result strictly to a PNG data URL forces the browser's high-quality image renderer.
+                setImgSrc(canvasRef.current.toDataURL('image/png'));
+                setRendering(false);
+            }
+        })
             .catch(() => { if (!cancelled) setRendering(false); });
 
         return () => { cancelled = true; };
@@ -82,13 +90,27 @@ export default function PolaroidCard({
                     width={EXPORT_WIDTH}
                     height={exportH}
                     style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'contain',
-                        borderRadius: 10,
-                        display: 'block'
+                        display: 'none'
                     }}
                 />
+
+                {/* 
+                  Render the image to force hardware-accelerated bicubic downscaling on iOS/iPadOS 
+                  Fixes the "wavy line" optical illusion on the 0.4 degree rotated Polaroid shape
+                */}
+                {imgSrc && (
+                    <img
+                        src={imgSrc}
+                        alt="Polaroid Preview"
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            borderRadius: 10,
+                            display: 'block'
+                        }}
+                    />
+                )}
                 {rendering && (
                     <div style={{
                         position: 'absolute', inset: 0, borderRadius: 10,
