@@ -45,23 +45,31 @@ export default function CreateCapsule() {
     // Search Spotify
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
-            if (query.length > 2) {
+            if (query.trim().length > 2) {
                 setLoading(true);
                 try {
                     const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(query)}&type=track`);
+                    if (res.status === 429) {
+                        toast.error('Too many search requests. Please wait a moment.');
+                        return;
+                    }
                     const data = await res.json();
                     if (data.tracks) {
                         setResults(data.tracks.items);
+                    } else if (data.error) {
+                        console.error('Spotify API returned error:', data.error);
+                        toast.error(data.error);
                     }
                 } catch (error) {
                     console.error('Search error:', error);
+                    toast.error('Failed to search Spotify.');
                 } finally {
                     setLoading(false);
                 }
             } else {
                 setResults([]);
             }
-        }, 500);
+        }, 800); // Increased debounce from 500ms to 800ms to avoid 429 errors
 
         return () => clearTimeout(delayDebounceFn);
     }, [query]);
