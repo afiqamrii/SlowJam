@@ -27,6 +27,7 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
     const [autoplayBlocked, setAutoplayBlocked] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+    const [appleMusicUrl, setAppleMusicUrl] = useState<string | null>(null);
 
     // ── Polaroid state ──────────────────────────────────────────────────────
     const [showPolaroid, setShowPolaroid] = useState(false);
@@ -44,6 +45,21 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // ── Resolve Apple Music direct URL via iTunes Lookup API ─────────────────
+    // We only store the numeric trackId. The real Apple Music URL also needs
+    // the albumId, so we do a quick free lookup to get the full trackViewUrl.
+    useEffect(() => {
+        const id = capsule?.spotify_track_id?.trim();
+        if (!id || isNaN(Number(id))) return; // only run for numeric (iTunes) IDs
+        fetch(`https://itunes.apple.com/lookup?id=${id}&entity=song`)
+            .then(r => r.json())
+            .then(data => {
+                const url = data.results?.[0]?.trackViewUrl;
+                if (url) setAppleMusicUrl(url);
+            })
+            .catch(() => { }); // fail silently — fallback search URL used instead
+    }, [capsule]);
 
     // Initial check on mount
     useEffect(() => {
@@ -142,7 +158,16 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
     if (!capsule) return <div className="min-h-screen flex items-center justify-center font-(--font-gloria) text-foreground">Capsule not found.</div>;
 
     const hasPreview = capsule.preview_url && capsule.preview_url.trim() !== '';
-    const hasSpotifyId = capsule.spotify_track_id && capsule.spotify_track_id.trim() !== '';
+
+    // ── Smart ID detection ────────────────────────────────────────────────────
+    // Old capsules (Spotify era): spotify_track_id is alphanumeric, e.g. "0VjIjW4GlUZAMYd2vXMi47"
+    // New capsules (iTunes era):  spotify_track_id is numeric,       e.g. "1488408568"
+    // We can tell them apart with a simple isNaN check — no DB migration needed.
+    const rawId = capsule.spotify_track_id?.trim() ?? '';
+    const isItunesId = rawId !== '' && !isNaN(Number(rawId));   // numeric  → iTunes
+    const isSpotifyId = rawId !== '' && isNaN(Number(rawId));   // alphanum → Spotify
+    const itunesId = isItunesId ? rawId : null;
+    const spotifyId = isSpotifyId ? rawId : null;
 
     return (
         <div className="min-h-screen px-3 md:px-6 py-12 flex flex-col items-center justify-start sm:justify-center font-(--font-gloria) text-center text-foreground">
@@ -218,7 +243,7 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                             className="w-full rounded-3xl overflow-hidden shadow-2xl"
                         >
                             {/* Hero: Album Art full-cover */}
-                            <div className="relative w-full aspect-square md:aspect-auto md:h-96">
+                            <div className="relative w-full aspect-square md:aspect-auto md:h-104">
                                 {capsule.album_art_url ? (
                                     <img
                                         src={capsule.album_art_url}
@@ -231,22 +256,96 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                                     </div>
                                 )}
 
-                                {/* Gradient overlay that covers the entire image so text and players are readable */}
-                                <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/40 to-black/10 flex flex-col justify-end p-6" />
+                                {/* Gradient overlay — stronger at bottom for text readability */}
+                                <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/50 to-black/10" />
 
-                                {/* Content layered on top of the image */}
-                                <div className="absolute inset-0 p-6 flex flex-col justify-end z-10 space-y-4">
-                                    <div className="text-left">
-                                        <p className="text-white/60 text-xs uppercase tracking-widest mb-1">Now Playing</p>
-                                        <h2 className="text-white text-2xl font-bold leading-tight drop-shadow-lg">{capsule.track_name}</h2>
-                                        <p className="text-white/70 text-sm mt-0.5">{capsule.artist_name}</p>
+                                {/* Track info — bottom-left */}
+                                <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
+                                    {/* Now Playing label */}
+                                    <p className="text-white/60 text-xs uppercase tracking-[0.2em] mb-2 text-left">Now Playing</p>
+
+                                    {/* Track name — larger, Gloria font (default), left */}
+                                    <h2 className="text-white text-3xl md:text-4xl font-bold leading-tight drop-shadow-lg pr-20 text-left">{capsule.track_name}</h2>
+
+                                    {/* Artist name — larger, Gloria font (default), left */}
+                                    <p className="text-white/75 text-base md:text-lg mt-1 pr-20 text-left">{capsule.artist_name}</p>
+
+                                    {/* ── Platform links row ── */}
+                                    <div className="flex items-center gap-3 mt-4">
+                                        <p className="text-white/40 text-[10px] uppercase tracking-widest font-sans mr-1">Open in</p>
+
+                                        {/* Spotify — direct link for old capsules (real Spotify ID), search for new ones (iTunes ID) */}
+                                        <a
+                                            href={spotifyId
+                                                ? `https://open.spotify.com/track/${spotifyId}`
+                                                : `https://open.spotify.com/search/${encodeURIComponent((capsule.track_name || '') + ' ' + (capsule.artist_name || ''))}`
+                                            }
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title={spotifyId ? 'Open on Spotify' : 'Search on Spotify'}
+                                            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                                        >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="#1DB954">
+                                                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.441 17.307a.75.75 0 0 1-1.031.25c-2.823-1.726-6.376-2.116-10.564-1.158a.75.75 0 0 1-.334-1.463c4.579-1.045 8.508-.596 11.68 1.34a.75.75 0 0 1 .249 1.031zm1.452-3.23a.938.938 0 0 1-1.288.308c-3.23-1.985-8.152-2.561-11.976-1.402a.937.937 0 1 1-.544-1.794c4.365-1.325 9.79-.682 13.5 1.599a.938.938 0 0 1 .308 1.289zm.125-3.363C15.34 8.445 9.375 8.25 5.858 9.35a1.125 1.125 0 1 1-.653-2.152c4.063-1.233 10.817-1.003 15.088 1.597a1.125 1.125 0 0 1-1.075 1.919z" />
+                                            </svg>
+                                        </a>
+
+                                        {/* YouTube Music */}
+                                        <a
+                                            href={`https://music.youtube.com/search?q=${encodeURIComponent((capsule.track_name || '') + ' ' + (capsule.artist_name || ''))}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title="Open on YouTube Music"
+                                            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                                        >
+                                            {/* YouTube Music — real logo from Wikimedia */}
+                                            <img
+                                                src="https://upload.wikimedia.org/wikipedia/commons/6/6a/Youtube_Music_icon.svg"
+                                                alt="YouTube Music"
+                                                width="22"
+                                                height="22"
+                                                className="rounded-sm"
+                                            />
+                                        </a>
+
+                                        {/* YouTube */}
+                                        <a
+                                            href={`https://www.youtube.com/results?search_query=${encodeURIComponent((capsule.track_name || '') + ' ' + (capsule.artist_name || '') + ' official')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title="Search on YouTube"
+                                            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                                        >
+                                            {/* YouTube logo */}
+                                            <svg width="20" height="14" viewBox="0 0 461.001 461.001" fill="#FF0000">
+                                                <path d="M365.257,67.393H95.744C42.866,67.393,0,110.259,0,163.137v134.728c0,52.878,42.866,95.744,95.744,95.744h269.513c52.878,0,95.744-42.866,95.744-95.744V163.137C461.001,110.259,418.135,67.393,365.257,67.393z M300.506,237.056l-126.06,60.123c-3.359,1.602-7.239-0.847-7.239-4.568V168.607c0-3.774,3.982-6.22,7.348-4.514l126.06,63.881C304.363,229.873,304.298,235.248,300.506,237.056z" />
+                                            </svg>
+                                        </a>
+
+                                        {/* Apple Music — direct link via iTunes Lookup, falls back to search */}
+                                        <a
+                                            href={appleMusicUrl || `https://music.apple.com/search?term=${encodeURIComponent((capsule.track_name || '') + ' ' + (capsule.artist_name || ''))}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title="Open on Apple Music"
+                                            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                                        >
+                                            {/* Apple Music — real colorful logo from Wikimedia */}
+                                            <img
+                                                src="https://commons.wikimedia.org/wiki/Special:FilePath/Apple_Music_icon.svg"
+                                                alt="Apple Music"
+                                                width="22"
+                                                height="22"
+                                                className="rounded-sm"
+                                            />
+                                        </a>
                                     </div>
 
-                                    {/* Spotify iframe injected right above the track info if no preview */}
-                                    {!hasPreview && hasSpotifyId ? (
-                                        <div className="w-full relative mt-1">
+                                    {/* Spotify iframe — only for old capsules with a real Spotify track ID */}
+                                    {!hasPreview && spotifyId ? (
+                                        <div className="w-full relative mt-4">
                                             <iframe
-                                                src={`https://open.spotify.com/embed/track/${capsule.spotify_track_id}?utm_source=generator&theme=0`}
+                                                src={`https://open.spotify.com/embed/track/${spotifyId}?utm_source=generator&theme=0`}
                                                 width="100%"
                                                 height="80"
                                                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
@@ -257,6 +356,7 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                                     ) : null}
                                 </div>
 
+                                {/* ── Play / Pause button — bottom-right corner ── */}
                                 {hasPreview && (
                                     <>
                                         <audio
@@ -265,18 +365,29 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                                             onEnded={() => setIsPlaying(false)}
                                         />
                                         <motion.button
-                                            whileTap={{ scale: 0.9 }}
+                                            whileTap={{ scale: 0.88 }}
+                                            whileHover={{ scale: 1.08 }}
                                             onClick={togglePlay}
-                                            className="absolute top-4 right-4 z-20 w-14 h-14 bg-white rounded-full shadow-xl flex items-center justify-center text-[#5c4033] hover:scale-105 transition-transform"
+                                            className="absolute bottom-6 right-6 z-20 w-16 h-16 bg-white rounded-full shadow-2xl flex items-center justify-center text-[#5c4033] transition-transform"
                                         >
                                             {isPlaying
-                                                ? <Pause size={26} fill="#5c4033" />
-                                                : <Play size={26} fill="#5c4033" className="ml-1" />
+                                                ? <Pause size={28} fill="#5c4033" />
+                                                : <Play size={28} fill="#5c4033" className="ml-1" />
                                             }
                                         </motion.button>
+
+                                        {/* Spinning ring around button when playing */}
+                                        {isPlaying && (
+                                            <motion.div
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+                                                className="absolute bottom-6 right-6 z-20 w-16 h-16 rounded-full border-2 border-white/40 border-dashed pointer-events-none"
+                                            />
+                                        )}
                                     </>
                                 )}
 
+                                {/* Autoplay blocked overlay */}
                                 {autoplayBlocked && hasPreview && (
                                     <motion.button
                                         initial={{ opacity: 0 }}
@@ -293,14 +404,6 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                                         </motion.div>
                                         <p className="text-white text-sm font-sans tracking-widest uppercase opacity-80">Tap to play</p>
                                     </motion.button>
-                                )}
-
-                                {isPlaying && (
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-                                        className="absolute top-4 right-4 z-20 w-14 h-14 rounded-full border-2 border-white/30 border-dashed pointer-events-none"
-                                    />
                                 )}
                             </div>
                         </motion.div>
@@ -519,8 +622,19 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                             </motion.div>
                         </motion.div>
 
-                        {/* bottom spacing */}
-                        <div className="h-8" />
+                        {/* Sent on timestamp */}
+                        {capsule.created_at && (
+                            <p className="text-center text-xs text-gray-400 font-sans tracking-wide mt-2 mb-6">
+                                ✉️ Sent on{' '}
+                                {new Date(capsule.created_at).toLocaleString('en-MY', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                })}
+                            </p>
+                        )}
                     </motion.div>
                 </>
             )}
