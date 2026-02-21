@@ -52,7 +52,7 @@ export default function PolaroidCard({
     const [rendering, setRendering] = useState(false);
 
     const exportH = FORMAT_HEIGHTS[format];
-    const previewH = Math.round(exportH * (PREVIEW_W / EXPORT_WIDTH));
+    const previewH = exportH * (PREVIEW_W / EXPORT_WIDTH);
 
     useEffect(() => {
         if (!canvasRef.current) return;

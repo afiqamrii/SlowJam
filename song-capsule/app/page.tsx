@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Music, Clock, Send, Heart, Headphones, Gift } from "lucide-react";
+import { Music, Clock, Send, Heart, Headphones, Gift, Camera } from "lucide-react";
 import SplitText from "./components/SplitText";
 import CurvedLoop from "./components/CurvedLoop";
 // Heart is kept for the feelings section
@@ -11,6 +11,7 @@ const steps = [
   { icon: Music, label: "Pick a Song", desc: "Search from millions of tracks on Spotify" },
   { icon: Clock, label: "Set a Date", desc: "Lock it until the perfect moment arrives" },
   { icon: Send, label: "Send the Link", desc: "Share it — they'll feel it when it opens" },
+  { icon: Camera, label: "Save a Polaroid", desc: "Export a beautiful aesthetic card for your stories" },
 ];
 
 const feelings = [
@@ -183,7 +184,7 @@ export default function Home() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {steps.map(({ icon: Icon, label, desc }, i) => (
             <motion.div
               key={label}
