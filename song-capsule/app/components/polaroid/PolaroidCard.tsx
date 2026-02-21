@@ -41,17 +41,40 @@ const PREVIEW_W = 300;
 
 function makePreviewPng(sourceCanvas: HTMLCanvasElement, previewW: number, previewH: number) {
     const dpr = Math.max(2, Math.min(window.devicePixelRatio || 1, 3));
-    const previewCanvas = document.createElement('canvas');
-    previewCanvas.width = Math.round(previewW * dpr);
-    previewCanvas.height = Math.round(previewH * dpr);
+    const targetW = Math.max(1, Math.round(previewW * dpr));
+    const targetH = Math.max(1, Math.round(previewH * dpr));
 
-    const pctx = previewCanvas.getContext('2d');
-    if (!pctx) return sourceCanvas.toDataURL('image/png');
+    // Progressive downscaling reduces iOS Safari edge wobble on slightly rotated shapes.
+    let currentCanvas: HTMLCanvasElement = sourceCanvas;
+    let currentW = sourceCanvas.width;
+    let currentH = sourceCanvas.height;
 
-    pctx.imageSmoothingEnabled = true;
-    pctx.imageSmoothingQuality = 'high';
-    pctx.drawImage(sourceCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
-    return previewCanvas.toDataURL('image/png');
+    while (currentW / 2 > targetW && currentH / 2 > targetH) {
+        const stepCanvas = document.createElement('canvas');
+        stepCanvas.width = Math.max(targetW, Math.round(currentW / 2));
+        stepCanvas.height = Math.max(targetH, Math.round(currentH / 2));
+
+        const stepCtx = stepCanvas.getContext('2d');
+        if (!stepCtx) break;
+        stepCtx.imageSmoothingEnabled = true;
+        stepCtx.imageSmoothingQuality = 'high';
+        stepCtx.drawImage(currentCanvas, 0, 0, stepCanvas.width, stepCanvas.height);
+
+        currentCanvas = stepCanvas;
+        currentW = stepCanvas.width;
+        currentH = stepCanvas.height;
+    }
+
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = targetW;
+    outputCanvas.height = targetH;
+
+    const outCtx = outputCanvas.getContext('2d');
+    if (!outCtx) return sourceCanvas.toDataURL('image/png');
+    outCtx.imageSmoothingEnabled = true;
+    outCtx.imageSmoothingQuality = 'high';
+    outCtx.drawImage(currentCanvas, 0, 0, targetW, targetH);
+    return outputCanvas.toDataURL('image/png');
 }
 
 export default function PolaroidCard({
@@ -64,11 +87,28 @@ export default function PolaroidCard({
     format = 'ig',
 }: PolaroidCardProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const frameRef = useRef<HTMLDivElement>(null);
     const [rendering, setRendering] = useState(false);
     const [imgSrc, setImgSrc] = useState<string | null>(null);
+    const [previewWidth, setPreviewWidth] = useState(PREVIEW_W);
 
     const exportH = FORMAT_HEIGHTS[format];
-    const previewH = exportH * (PREVIEW_W / EXPORT_WIDTH);
+    const previewH = exportH * (previewWidth / EXPORT_WIDTH);
+
+    useEffect(() => {
+        const frame = frameRef.current;
+        if (!frame || typeof ResizeObserver === 'undefined') return;
+
+        const syncWidth = () => {
+            const next = Math.max(1, Math.round(Math.min(frame.getBoundingClientRect().width, PREVIEW_W)));
+            setPreviewWidth((prev) => (prev === next ? prev : next));
+        };
+
+        syncWidth();
+        const observer = new ResizeObserver(syncWidth);
+        observer.observe(frame);
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -86,20 +126,19 @@ export default function PolaroidCard({
             format,
         }).then(() => {
             if (!cancelled && canvasRef.current) {
-                // iOS Safari can produce jagged/wobbly lines when massively downscaling a rotated high-res canvas.
-                // Pre-resampling to a DPR-matched preview canvas stabilizes anti-aliasing in the live preview.
-                setImgSrc(makePreviewPng(canvasRef.current, PREVIEW_W, previewH));
+                // Generate the preview at the exact displayed size × DPR to avoid extra iOS Safari resampling.
+                setImgSrc(makePreviewPng(canvasRef.current, previewWidth, previewH));
                 setRendering(false);
             }
         })
             .catch(() => { if (!cancelled) setRendering(false); });
 
         return () => { cancelled = true; };
-    }, [croppedImageCanvas, trackName, artistName, albumArtUrl, message, receiverName, format, previewH]);
+    }, [croppedImageCanvas, trackName, artistName, albumArtUrl, message, receiverName, format, previewWidth, previewH]);
 
     return (
         <div className="flex flex-col items-center gap-2">
-            <div style={{ position: 'relative', width: '100%', maxWidth: PREVIEW_W, aspectRatio: `${EXPORT_WIDTH} / ${exportH}` }}>
+            <div ref={frameRef} style={{ position: 'relative', width: '100%', maxWidth: PREVIEW_W, aspectRatio: `${EXPORT_WIDTH} / ${exportH}` }}>
                 <canvas
                     ref={canvasRef}
                     width={EXPORT_WIDTH}
@@ -109,10 +148,6 @@ export default function PolaroidCard({
                     }}
                 />
 
-                {/* 
-                  Render the image to force hardware-accelerated bicubic downscaling on iOS/iPadOS 
-                  Fixes the "wavy line" optical illusion on the 0.4 degree rotated Polaroid shape
-                */}
                 {imgSrc && (
                     <img
                         src={imgSrc}
@@ -123,9 +158,6 @@ export default function PolaroidCard({
                             objectFit: 'contain',
                             borderRadius: 10,
                             display: 'block',
-                            transform: 'translateZ(0)',
-                            backfaceVisibility: 'hidden',
-                            WebkitBackfaceVisibility: 'hidden',
                             imageRendering: 'auto',
                         }}
                     />
