@@ -400,12 +400,12 @@ export async function renderPolaroidToCanvas(
         drawTikTokFooter(ctx, W, footerStart, H - footerStart);
     }
 
-    // 8. Watermark — "SlowJam", small, warm muted tone
+    // 8. Watermark
     ctx.save();
-    ctx.fillStyle = 'rgba(120,90,60,0.32)';   // warm muted brown (not terracotta, not black)
-    ctx.font = '16px "Gloria Hallelujah", cursive';
-    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(120,90,60,0.55)';   // slightly more visible but still muted
+    ctx.font = '18px "Gloria Hallelujah", cursive';
+    ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText('SlowJam ✦', W - 32, H - 24);
+    ctx.fillText('Created via slowjam.xyz ✦', W / 2, H - 24);
     ctx.restore();
 }
