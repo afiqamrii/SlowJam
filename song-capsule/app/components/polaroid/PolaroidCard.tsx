@@ -76,12 +76,18 @@ export default function PolaroidCard({
 
     return (
         <div className="flex flex-col items-center gap-2">
-            <div style={{ position: 'relative', width: PREVIEW_W, height: previewH }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: PREVIEW_W, aspectRatio: `${EXPORT_WIDTH} / ${exportH}` }}>
                 <canvas
                     ref={canvasRef}
                     width={EXPORT_WIDTH}
                     height={exportH}
-                    style={{ width: PREVIEW_W, height: previewH, borderRadius: 10, display: 'block' }}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        borderRadius: 10,
+                        display: 'block'
+                    }}
                 />
                 {rendering && (
                     <div style={{
