@@ -48,7 +48,7 @@ export default function CreateCapsule() {
             if (query.trim().length > 2) {
                 setLoading(true);
                 try {
-                    const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(query)}&type=track`);
+                    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
                     if (res.status === 429) {
                         toast.error('Too many search requests. Please wait a moment.');
                         return;
