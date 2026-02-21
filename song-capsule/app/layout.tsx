@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export default function RootLayout({
   children,
@@ -43,6 +44,7 @@ export default function RootLayout({
         <Footer />
         <Toaster position="top-center" richColors />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
