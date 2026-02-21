@@ -18,7 +18,11 @@ export const FORMAT_HEIGHTS: Record<ExportFormat, number> = {
 const CARD_W = 800;
 const CARD_H = 1160;  // taller card — more bottom strip room
 const CARD_RADIUS = 14;
-const CARD_ROT = 0.007;
+// iOS Safari Antialiasing Issue: An almost imperceptible fractional rotation (like 0.007 rads) 
+// looks fine at 100% scale or on desktop, but creates terrible jagged/wavy optical illusions 
+// ("stair-stepping") when scaled down to fit on high-DPI iPhone screens. 
+// For perfectly straight lines on mobile previews, rotation must map exactly to the pixel grid.
+const CARD_ROT = 0;
 const SIDE_PAD = 35;              // slightly smaller photo → more bottom strip
 const PHOTO_SIZE = CARD_W - SIDE_PAD * 2;  // 724px
 const BOTTOM_H = CARD_H - SIDE_PAD - PHOTO_SIZE;  // ~318px
