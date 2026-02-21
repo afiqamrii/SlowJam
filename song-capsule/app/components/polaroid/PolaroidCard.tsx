@@ -39,6 +39,21 @@ function makePlaceholderCanvas(size: number): HTMLCanvasElement {
 
 const PREVIEW_W = 300;
 
+function makePreviewPng(sourceCanvas: HTMLCanvasElement, previewW: number, previewH: number) {
+    const dpr = Math.max(2, Math.min(window.devicePixelRatio || 1, 3));
+    const previewCanvas = document.createElement('canvas');
+    previewCanvas.width = Math.round(previewW * dpr);
+    previewCanvas.height = Math.round(previewH * dpr);
+
+    const pctx = previewCanvas.getContext('2d');
+    if (!pctx) return sourceCanvas.toDataURL('image/png');
+
+    pctx.imageSmoothingEnabled = true;
+    pctx.imageSmoothingQuality = 'high';
+    pctx.drawImage(sourceCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+    return previewCanvas.toDataURL('image/png');
+}
+
 export default function PolaroidCard({
     croppedImageCanvas,
     trackName,
@@ -71,16 +86,16 @@ export default function PolaroidCard({
             format,
         }).then(() => {
             if (!cancelled && canvasRef.current) {
-                // High-DPI screens on iOS/Mac Safari use awful nearest-neighbor scaling for live <canvas> elements.
-                // Converting the result strictly to a PNG data URL forces the browser's high-quality image renderer.
-                setImgSrc(canvasRef.current.toDataURL('image/png'));
+                // iOS Safari can produce jagged/wobbly lines when massively downscaling a rotated high-res canvas.
+                // Pre-resampling to a DPR-matched preview canvas stabilizes anti-aliasing in the live preview.
+                setImgSrc(makePreviewPng(canvasRef.current, PREVIEW_W, previewH));
                 setRendering(false);
             }
         })
             .catch(() => { if (!cancelled) setRendering(false); });
 
         return () => { cancelled = true; };
-    }, [croppedImageCanvas, trackName, artistName, albumArtUrl, message, receiverName, format]);
+    }, [croppedImageCanvas, trackName, artistName, albumArtUrl, message, receiverName, format, previewH]);
 
     return (
         <div className="flex flex-col items-center gap-2">
@@ -107,7 +122,11 @@ export default function PolaroidCard({
                             height: '100%',
                             objectFit: 'contain',
                             borderRadius: 10,
-                            display: 'block'
+                            display: 'block',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
+                            imageRendering: 'auto',
                         }}
                     />
                 )}
