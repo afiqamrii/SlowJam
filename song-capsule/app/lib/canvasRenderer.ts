@@ -299,6 +299,11 @@ export async function renderPolaroidToCanvas(
     const cxC = CARD_X + CARD_W / 2, cyC = CARD_Y + CARD_H / 2;
     ctx.translate(cxC, cyC); ctx.rotate(CARD_ROT); ctx.translate(-cxC, -cyC);
 
+    // iOS Safari Antialiasing Hack:
+    // Ensure smoothing is enabled at the exact moment of drawing the rotated paths
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
     // Shadow
     ctx.save();
     ctx.shadowColor = 'rgba(80,55,30,0.22)';
@@ -308,8 +313,16 @@ export async function renderPolaroidToCanvas(
     ctx.restore();
 
     // Card body
+    ctx.save();
+    // Another iOS Antialiasing Hack: Adding a microscopic transparent shadow to the shape
+    // forces the GPU to engage the shadow-blur pipeline, which naturally anti-aliases vector edges.
+    ctx.shadowColor = 'rgba(0,0,0,0.01)';
+    ctx.shadowBlur = 1;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
     rrect(ctx, CARD_X, CARD_Y, CARD_W, CARD_H, CARD_RADIUS);
     ctx.fillStyle = '#fefcf9'; ctx.fill();
+    ctx.restore();
 
     // 5. Photo with filter
     // 5. Photo (Raw, no filter)
