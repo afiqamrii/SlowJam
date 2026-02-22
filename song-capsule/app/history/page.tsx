@@ -82,19 +82,20 @@ export default function HistoryPage() {
                 const localIds = all.map(i => i.id).filter(Boolean);
 
                 if (localIds.length > 0) {
-                    const { error } = await supabase
-                        .from('capsules')
-                        .update({ owner_id: user.id })
-                        .in('id', localIds)
-                        .is('owner_id', null);
-
-                    if (error) {
-                        console.error("Auto-claim RLS blocked:", error);
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.access_token) {
+                        await fetch('/api/claim-capsules', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${session.access_token}`,
+                            },
+                            body: JSON.stringify({ ids: localIds, userId: user.id }),
+                        });
+                        // (Silently ignore errors — claiming is best-effort)
                     }
                 }
-            } catch (e) {
-                console.error("Auto-claim error:", e);
-            }
+            } catch { /* best effort */ }
 
             // Step 2: Now fetch all capsules owned by this user (includes newly claimed)
             const { data } = await supabase
