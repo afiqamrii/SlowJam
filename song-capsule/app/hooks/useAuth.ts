@@ -25,6 +25,18 @@ export function useAuth() {
     }, []);
 
     const signInWithGoogle = async () => {
+        // Google blocks OAuth in in-app browsers (Threads, Instagram, WhatsApp, TikTok, etc.)
+        // Detect and warn the user to open in a real browser instead
+        const ua = navigator.userAgent || '';
+        const isInAppBrowser = /Instagram|FBAN|FBAV|FB_IAB|Twitter|BytedanceWebview|musical_ly|MicroMessenger|WeChat|Snapchat|Line\/|WhatsApp/i.test(ua);
+
+        if (isInAppBrowser) {
+            alert(
+                'Sign-in is not supported inside this app\'s browser.\n\nPlease tap the ••• menu (or share button) and choose "Open in Chrome" or "Open in Safari" to sign in.'
+            );
+            return;
+        }
+
         await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {

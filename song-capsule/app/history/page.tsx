@@ -67,7 +67,8 @@ export default function HistoryPage() {
         e.preventDefault();
         e.stopPropagation();
         const base = `${window.location.origin}/view/${item.id}`;
-        const link = (item.is_private && item.share_token) ? `${base}?key=${item.share_token}` : base;
+        // Use share_token if available (set for all private capsules)
+        const link = item.share_token ? `${base}?key=${item.share_token}` : base;
         navigator.clipboard.writeText(link);
         toast.success('Link copied!');
     };
