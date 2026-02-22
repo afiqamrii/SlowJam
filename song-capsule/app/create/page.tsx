@@ -1,14 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ArrowRight, Calendar, Lock, Check, Copy, Clock, Zap, ChevronLeft, Globe } from 'lucide-react';
+import { Search, ArrowRight, Calendar, Lock, Check, Copy, Clock, Zap, ChevronLeft, Globe, Camera, ChevronUp, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import Confetti from 'react-confetti';
 import { useAuth } from '@/app/hooks/useAuth';
 import AuthModal from '@/app/components/AuthModal';
+
+// ── Polaroid imports ────────────────────────────────────────────────────────
+import ImageCropper from '@/app/components/polaroid/ImageCropper';
+import PolaroidCard from '@/app/components/polaroid/PolaroidCard';
+import ExportButton from '@/app/components/polaroid/ExportButton';
+import { useImageProcessing } from '@/app/hooks/useImageProcessing';
+import { useCanvasExport } from '@/app/hooks/useCanvasExport';
+import type { ExportFormat } from '@/app/lib/canvasRenderer';
 
 export default function CreateCapsule() {
     const router = useRouter();
@@ -29,6 +37,13 @@ export default function CreateCapsule() {
     const [capsuleId, setCapsuleId] = useState<string | null>(null);
     const [shareToken, setShareToken] = useState<string | null>(null);
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+
+    // ── Polaroid state ────────────────────────────────────────────────────────
+    const [showPolaroid, setShowPolaroid] = useState(false);
+    const [format, setFormat] = useState<ExportFormat>('ig');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const imgProc = useImageProcessing();
+    const { isExporting, exportPNG } = useCanvasExport();
 
     useEffect(() => {
         const handleResize = () => {
@@ -122,6 +137,39 @@ export default function CreateCapsule() {
     const handleDateNext = () => {
         setSendNow(false);
         nextStep();
+    };
+
+    // ── Export handler ──────────────────────────────────────────────────────
+    const handleExport = useCallback(async () => {
+        if (!imgProc.processedCanvas || !selectedTrack || !capsuleId) return;
+
+        // Track download in DB (fire and forget)
+        supabase.rpc('increment_polaroid_downloads', { target_capsule_id: capsuleId })
+            .then(({ error }) => {
+                if (error) console.error('Error incrementing polaroid downloads:', error);
+            });
+
+        await exportPNG({
+            croppedImageCanvas: imgProc.processedCanvas,
+            trackName: selectedTrack.name,
+            artistName: selectedTrack.artists[0].name,
+            albumArtUrl: selectedTrack.album.images[0]?.url ?? '',
+            message: message ?? '',
+            receiverName: receiverName,
+            format,
+        });
+    }, [imgProc.processedCanvas, selectedTrack, message, receiverName, exportPNG, format, capsuleId]);
+
+    // ── Image upload handler ────────────────────────────────────────────────
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            imgProc.setRawSrc(ev.target?.result as string);
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSeal = async () => {
@@ -676,6 +724,140 @@ export default function CreateCapsule() {
                                 >
                                     Create Another
                                 </button>
+                            </div>
+
+                            {/* ── Polaroid Section ── */}
+                            <div className="w-full mt-8 bg-white/60 p-6 rounded-3xl border border-border shadow-sm">
+                                <div
+                                    className="flex items-center justify-between cursor-pointer"
+                                    onClick={() => setShowPolaroid(v => !v)}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-accent/10 rounded-xl text-accent">
+                                            <Camera size={22} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="font-bold text-[var(--foreground)] text-base">Create a Polaroid</p>
+                                            <p className="text-sm font-sans text-gray-400 font-semibold tracking-wide uppercase mt-0.5">Save for Stories</p>
+                                        </div>
+                                    </div>
+                                    {showPolaroid ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                                </div>
+
+                                <AnimatePresence>
+                                    {showPolaroid && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="pt-6 border-t border-gray-100 mt-5 space-y-8 text-left">
+
+                                                {/* ── Step 1: Photo ── */}
+                                                <div className="space-y-3">
+                                                    <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                        1. Add a photo
+                                                    </p>
+
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        ref={fileInputRef}
+                                                        onChange={handleImageChange}
+                                                        className="hidden"
+                                                    />
+
+                                                    {!imgProc.rawSrc ? (
+                                                        <button
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="w-full py-10 rounded-2xl border-2 border-dashed border-gray-200 hover:border-accent hover:bg-accent/5 transition-all flex flex-col items-center justify-center gap-2 group"
+                                                        >
+                                                            <div className="p-3 bg-gray-50 group-hover:bg-accent/10 rounded-full text-gray-400 group-hover:text-accent transition-colors">
+                                                                <ImageIcon size={28} />
+                                                            </div>
+                                                            <span className="font-bold text-gray-500 group-hover:text-accent font-sans">
+                                                                Tap to upload photo
+                                                            </span>
+                                                        </button>
+                                                    ) : (
+                                                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-3">
+                                                            <ImageCropper
+                                                                imageSrc={imgProc.rawSrc}
+                                                                crop={imgProc.crop}
+                                                                zoom={imgProc.zoom}
+                                                                onCropChange={imgProc.setCrop}
+                                                                onZoomChange={imgProc.setZoom}
+                                                                onCropComplete={imgProc.onCropComplete}
+                                                            />
+                                                            <button
+                                                                onClick={() => { imgProc.setRawSrc(null); }}
+                                                                className="text-xs text-gray-400 hover:text-accent font-sans transition-colors self-center"
+                                                            >
+                                                                ↩ Change photo
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* ── Step 2: Preview ── */}
+                                                <div className="space-y-3">
+                                                    <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                        2. Preview your card
+                                                    </p>
+                                                    <PolaroidCard
+                                                        croppedImageCanvas={imgProc.processedCanvas}
+                                                        trackName={selectedTrack?.name ?? ''}
+                                                        artistName={selectedTrack?.artists[0]?.name ?? ''}
+                                                        albumArtUrl={selectedTrack?.album.images[0]?.url}
+                                                        message={message}
+                                                        receiverName={receiverName}
+                                                        format={format}
+                                                    />
+                                                </div>
+
+                                                {/* ── Step 3: Download ── */}
+                                                <div className="space-y-4">
+                                                    <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                        3. Choose format & download
+                                                    </p>
+
+                                                    <div className="flex gap-3">
+                                                        <button
+                                                            onClick={() => setFormat('ig')}
+                                                            className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl border-2 transition-all ${format === 'ig'
+                                                                ? 'border-accent bg-accent/8 text-accent'
+                                                                : 'border-border text-gray-400 hover:border-accent/50'
+                                                                }`}
+                                                        >
+                                                            <span className="text-xs font-bold font-sans">Instagram</span>
+                                                            <span className="text-[10px] font-sans opacity-70">1080 × 1350</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setFormat('tiktok')}
+                                                            className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl border-2 transition-all ${format === 'tiktok'
+                                                                ? 'border-accent bg-accent/8 text-accent'
+                                                                : 'border-border text-gray-400 hover:border-accent/50'
+                                                                }`}
+                                                        >
+                                                            <span className="text-xs font-bold font-sans">TikTok</span>
+                                                            <span className="text-[10px] font-sans opacity-70">1080 × 1920</span>
+                                                        </button>
+                                                    </div>
+
+                                                    <ExportButton
+                                                        onClick={handleExport}
+                                                        isExporting={isExporting}
+                                                        disabled={!imgProc.processedCanvas}
+                                                    />
+                                                    {!imgProc.rawSrc && (
+                                                        <p className="text-xs text-gray-400 font-sans text-center">Upload a photo first to enable download.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </motion.div>
                     </>
