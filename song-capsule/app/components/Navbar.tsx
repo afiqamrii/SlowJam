@@ -39,7 +39,7 @@ export default function Navbar() {
         if (!report.trim()) return;
         const subject = encodeURIComponent('SlowJam — Support Request');
         const body = encodeURIComponent(report);
-        window.open(`mailto:support@slowjam.app?subject=${subject}&body=${body}`, '_blank');
+        window.open(`mailto:support@slowjam.xyz?subject=${subject}&body=${body}`, '_blank');
         setReport('');
         setSupportOpen(false);
     };
