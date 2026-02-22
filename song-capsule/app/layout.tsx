@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import WhatsNewBanner from './components/WhatsNewBanner';
 
 export default function RootLayout({
   children,
@@ -65,6 +66,7 @@ export default function RootLayout({
       </head>
       <body className={`${gloria.variable} font-sans antialiased text-[var(--foreground)] bg-[var(--background)]`}>
         <Navbar />
+        <WhatsNewBanner />
         <main className="flex-1 pt-14">
           {children}
         </main>
