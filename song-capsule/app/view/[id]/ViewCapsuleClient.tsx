@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Play, Pause, ExternalLink, Music2, Clock, Camera, ChevronDown, ChevronUp } from 'lucide-react';
+import { Lock, Play, Pause, Music2, Clock, Camera, ChevronDown, ChevronUp } from 'lucide-react';
 import Confetti from 'react-confetti';
 import ReactMarkdown from 'react-markdown';
 
@@ -13,6 +13,7 @@ import ExportButton from '@/app/components/polaroid/ExportButton';
 import { useImageProcessing } from '@/app/hooks/useImageProcessing';
 import { useCanvasExport } from '@/app/hooks/useCanvasExport';
 import type { ExportFormat } from '@/app/lib/canvasRenderer';
+import { useAuth } from '@/app/hooks/useAuth';
 
 interface ViewCapsuleClientProps {
     capsule: any;
@@ -20,6 +21,7 @@ interface ViewCapsuleClientProps {
 
 export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
     // Note: capsule is now passed as a prop, already fetched by the server
+    const { user, loading: authLoading, signInWithGoogle } = useAuth();
 
     const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [isUnlocked, setIsUnlocked] = useState(false);
@@ -157,6 +159,60 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
 
     if (!capsule) return <div className="min-h-screen flex items-center justify-center font-(--font-gloria) text-foreground">Capsule not found.</div>;
 
+    // ── Privacy Gate ─────────────────────────────────────────────────────────
+    // If the capsule is private AND (user is not signed in OR user is not the owner), block content.
+    const isOwner = !!user && !!capsule.owner_id && user.id === capsule.owner_id;
+    const isPrivateAndBlocked = capsule.is_private && !authLoading && !isOwner;
+
+    if (isPrivateAndBlocked) {
+        return (
+            <div className="min-h-screen flex items-center justify-center px-4 font-(--font-gloria) text-center">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-6 max-w-sm w-full bg-white p-8 rounded-3xl border border-border shadow-xl relative overflow-hidden"
+                >
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[var(--accent)] to-[var(--accent-secondary)]" />
+
+                    <div className="w-16 h-16 bg-[var(--accent)]/10 rounded-2xl flex items-center justify-center mx-auto text-[var(--accent)]">
+                        <Lock size={32} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <h1 className="text-2xl font-bold">Private Message</h1>
+                        <p className="text-gray-500 font-sans text-sm">
+                            This capsule is private. Only the person who created it can view it.
+                        </p>
+                    </div>
+
+                    {!user ? (
+                        <>
+                            <p className="text-gray-400 font-sans text-xs">
+                                If this is your capsule, sign in to access it.
+                            </p>
+                            <button
+                                onClick={signInWithGoogle}
+                                className="w-full flex items-center justify-center gap-3 py-3.5 px-6 bg-white border-2 border-gray-200 rounded-2xl font-semibold text-gray-700 font-sans hover:border-[var(--accent)] hover:shadow-md transition-all active:scale-95"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
+                                    <path d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" fill="#FFC107" />
+                                    <path d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" fill="#FF3D00" />
+                                    <path d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0124 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" fill="#4CAF50" />
+                                    <path d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" fill="#1976D2" />
+                                </svg>
+                                Sign in with Google
+                            </button>
+                        </>
+                    ) : (
+                        <p className="text-gray-400 font-sans text-xs">
+                            You are signed in as <b>{user.email}</b>, but this capsule belongs to someone else.
+                        </p>
+                    )}
+                </motion.div>
+            </div>
+        );
+    }
+
     const hasPreview = capsule.preview_url && capsule.preview_url.trim() !== '';
 
     // ── Smart ID detection ────────────────────────────────────────────────────
@@ -267,8 +323,8 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                                     {/* Track name — larger, Gloria font (default), left */}
                                     <h2 className="text-white text-3xl md:text-4xl font-bold leading-tight drop-shadow-lg pr-20 text-left">{capsule.track_name}</h2>
 
-                                    {/* Artist name — larger, Gloria font (default), left */}
-                                    <p className="text-white/75 text-base md:text-lg mt-1 pr-20 text-left">{capsule.artist_name}</p>
+                                    {/* Artist name — Gloria font, left */}
+                                    <p className="text-white/75 text-base md:text-lg mt-1 pr-20 text-left font-(--font-gloria)">{capsule.artist_name}</p>
 
                                     {/* ── Platform links row ── */}
                                     <div className="flex items-center gap-3 mt-4">

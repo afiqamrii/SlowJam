@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Send, Menu } from 'lucide-react';
+import { X, Mail, Send, Menu, LogOut, LogIn } from 'lucide-react';
 import GradientText from './GradientText';
+import { useAuth } from '@/app/hooks/useAuth';
 
 const NAV_LINKS = [
     { label: 'Create', href: '/create' },
@@ -18,6 +19,21 @@ export default function Navbar() {
     const [supportOpen, setSupportOpen] = useState(false);
     const [report, setReport] = useState('');
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+    const confirmRef = useRef<HTMLDivElement>(null);
+    const { user, signInWithGoogle, signOut } = useAuth();
+
+    // Close confirm popover when clicking outside
+    useEffect(() => {
+        if (!showSignOutConfirm) return;
+        const handler = (e: MouseEvent) => {
+            if (confirmRef.current && !confirmRef.current.contains(e.target as Node)) {
+                setShowSignOutConfirm(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showSignOutConfirm]);
 
     const handleSendReport = () => {
         if (!report.trim()) return;
@@ -27,6 +43,13 @@ export default function Navbar() {
         setReport('');
         setSupportOpen(false);
     };
+
+    // Get initials or first letter from email
+    const userInitial = user?.user_metadata?.name
+        ? user.user_metadata.name[0].toUpperCase()
+        : user?.email?.[0]?.toUpperCase() ?? '?';
+
+    const userAvatar = user?.user_metadata?.avatar_url;
 
     return (
         <>
@@ -73,6 +96,72 @@ export default function Navbar() {
                         >
                             Support
                         </button>
+
+                        {/* Auth section */}
+                        {user ? (
+                            <div className="flex items-center gap-2 ml-2">
+                                {/* Avatar */}
+                                {userAvatar ? (
+                                    <img
+                                        src={userAvatar}
+                                        alt={user.user_metadata?.name ?? 'User'}
+                                        className="w-7 h-7 rounded-full border-2 border-[var(--accent)]/30 object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center text-white text-xs font-bold">
+                                        {userInitial}
+                                    </div>
+                                )}
+
+                                {/* Sign-out with confirmation popover */}
+                                <div className="relative" ref={confirmRef}>
+                                    <button
+                                        onClick={() => setShowSignOutConfirm(v => !v)}
+                                        title="Sign out"
+                                        className="p-1.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                    >
+                                        <LogOut size={15} />
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {showSignOutConfirm && (
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="absolute right-0 top-9 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 w-52 z-50"
+                                            >
+                                                <p className="text-sm font-sans font-semibold text-gray-700 mb-1">Sign out?</p>
+                                                <p className="text-xs font-sans text-gray-400 mb-3">You&apos;ll need to sign in again to see private capsules.</p>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setShowSignOutConfirm(false)}
+                                                        className="flex-1 py-1.5 text-xs font-sans font-medium text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { signOut(); setShowSignOutConfirm(false); }}
+                                                        className="flex-1 py-1.5 text-xs font-sans font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+                                                    >
+                                                        Sign out
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={signInWithGoogle}
+                                className="ml-2 flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold font-sans text-[var(--accent)] border border-[var(--accent)]/40 rounded-full hover:bg-[var(--accent)]/8 transition-colors"
+                            >
+                                <LogIn size={14} />
+                                Sign In
+                            </button>
+                        )}
                     </div>
 
                     {/* Mobile hamburger */}
@@ -113,6 +202,45 @@ export default function Navbar() {
                                 >
                                     Support
                                 </button>
+
+                                {/* Mobile auth */}
+                                <div className="pt-1 mt-1 border-t border-gray-100">
+                                    {user ? (
+                                        <div className="flex items-center gap-3 px-3 py-2">
+                                            {userAvatar ? (
+                                                <img
+                                                    src={userAvatar}
+                                                    alt={user.user_metadata?.name ?? 'User'}
+                                                    className="w-7 h-7 rounded-full border border-[var(--accent)]/30 object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center text-white text-xs font-bold">
+                                                    {userInitial}
+                                                </div>
+                                            )}
+                                            <span className="flex-1 text-sm font-sans text-gray-600 truncate">{user.user_metadata?.name ?? user.email}</span>
+                                            {/* Mobile sign-out — simple confirm with two buttons inline */}
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm('Sign out of SlowJam?')) {
+                                                        setMobileOpen(false);
+                                                        signOut();
+                                                    }
+                                                }}
+                                                className="flex items-center gap-1 text-xs text-red-500 font-sans font-medium"
+                                            >
+                                                <LogOut size={13} /> Sign out
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => { setMobileOpen(false); signInWithGoogle(); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-sans font-medium text-[var(--accent)] hover:bg-[var(--accent)]/8 transition-colors"
+                                        >
+                                            <LogIn size={15} /> Sign In with Google
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     )}

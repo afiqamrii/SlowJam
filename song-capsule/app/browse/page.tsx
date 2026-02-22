@@ -144,7 +144,14 @@ export default function BrowsePage() {
                                                     </span>
 
                                                     {/* Message preview */}
-                                                    {isLocked ? (
+                                                    {capsule.is_private ? (
+                                                        <div className="flex items-center gap-2 py-1.5 px-3 bg-[var(--accent)]/6 rounded-xl border border-dashed border-[var(--accent)]/25">
+                                                            <span className="text-base">🔒</span>
+                                                            <p className="text-sm text-[var(--accent)] italic">
+                                                                psst... it's a secret. belongs to someone 👀
+                                                            </p>
+                                                        </div>
+                                                    ) : isLocked ? (
                                                         <div className="flex items-center gap-2 py-2">
                                                             <Lock size={14} className="text-gray-400 shrink-0" />
                                                             <p className="text-sm text-gray-400 font-sans italic">
@@ -175,7 +182,7 @@ export default function BrowsePage() {
                                                         <p className="text-sm font-bold text-[var(--foreground)] truncate leading-tight">
                                                             {capsule.track_name}
                                                         </p>
-                                                        <p className="text-xs text-gray-400 truncate font-sans">
+                                                        <p className="text-xs text-gray-400 truncate">
                                                             {capsule.artist_name}
                                                         </p>
                                                     </div>
