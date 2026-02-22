@@ -27,6 +27,7 @@ export default function CreateCapsule() {
     const [sendNow, setSendNow] = useState(false);
     const [loading, setLoading] = useState(false);
     const [capsuleId, setCapsuleId] = useState<string | null>(null);
+    const [shareToken, setShareToken] = useState<string | null>(null);
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
@@ -171,13 +172,16 @@ export default function CreateCapsule() {
                         unlock_at: unlockAt,
                         is_private: isPrivate ?? false,
                         owner_id: isPrivate ? user?.id ?? null : null,
+                        share_token: isPrivate ? crypto.randomUUID() : null,
                     },
                 ])
                 .select()
                 .single();
 
             if (error) throw error;
+            const newToken = isPrivate ? (data.share_token ?? null) : null;
             setCapsuleId(data.id);
+            setShareToken(newToken);
 
             // Save to localStorage for History page (public only — private are fetched from Supabase)
             try {
@@ -206,7 +210,8 @@ export default function CreateCapsule() {
 
     const copyLink = () => {
         if (!capsuleId) return;
-        const link = `${window.location.origin}/view/${capsuleId}`;
+        const base = `${window.location.origin}/view/${capsuleId}`;
+        const link = (isPrivate && shareToken) ? `${base}?key=${shareToken}` : base;
         navigator.clipboard.writeText(link);
         toast.success('Link copied to clipboard!');
     };

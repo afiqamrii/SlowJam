@@ -7,6 +7,7 @@ export const revalidate = 0; // Ensure dynamic data fetching
 
 interface Props {
     params: Promise<{ id: string }>;
+    searchParams: Promise<{ key?: string }>;
 }
 
 async function getCapsule(id: string) {
@@ -71,11 +72,21 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 export default async function ViewCapsulePage(props: Props) {
     const params = await props.params;
+    const searchParams = await props.searchParams;
     const capsule = await getCapsule(params.id);
 
     if (!capsule) {
         notFound();
     }
 
-    return <ViewCapsuleClient capsule={capsule} />;
+    // Validate the share key server-side — never send share_token to the client
+    const isShareAuthorized =
+        capsule.is_private &&
+        !!capsule.share_token &&
+        searchParams.key === capsule.share_token;
+
+    // Strip share_token before passing to client
+    const { share_token: _removed, ...capsuleForClient } = capsule;
+
+    return <ViewCapsuleClient capsule={capsuleForClient} isShareAuthorized={isShareAuthorized} />;
 }

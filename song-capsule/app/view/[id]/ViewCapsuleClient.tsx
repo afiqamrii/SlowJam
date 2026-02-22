@@ -17,9 +17,10 @@ import { useAuth } from '@/app/hooks/useAuth';
 
 interface ViewCapsuleClientProps {
     capsule: any;
+    isShareAuthorized?: boolean;
 }
 
-export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
+export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }: ViewCapsuleClientProps) {
     // Note: capsule is now passed as a prop, already fetched by the server
     const { user, loading: authLoading, signInWithGoogle } = useAuth();
 
@@ -160,9 +161,9 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
     if (!capsule) return <div className="min-h-screen flex items-center justify-center font-(--font-gloria) text-foreground">Capsule not found.</div>;
 
     // ── Privacy Gate ─────────────────────────────────────────────────────────
-    // If the capsule is private AND (user is not signed in OR user is not the owner), block content.
+    // Private capsules are accessible if: (a) user is the owner, or (b) they have the secret share link
     const isOwner = !!user && !!capsule.owner_id && user.id === capsule.owner_id;
-    const isPrivateAndBlocked = capsule.is_private && !authLoading && !isOwner;
+    const isPrivateAndBlocked = capsule.is_private && !authLoading && !isOwner && !isShareAuthorized;
 
     if (isPrivateAndBlocked) {
         return (
@@ -172,19 +173,16 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     className="space-y-6 max-w-sm w-full bg-white p-8 rounded-3xl border border-border shadow-xl relative overflow-hidden"
                 >
-                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[var(--accent)] to-[var(--accent-secondary)]" />
-
-                    <div className="w-16 h-16 bg-[var(--accent)]/10 rounded-2xl flex items-center justify-center mx-auto text-[var(--accent)]">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-accent to-accent-secondary" />
+                    <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto text-accent">
                         <Lock size={32} />
                     </div>
-
                     <div className="space-y-2">
-                        <h1 className="text-2xl font-bold">Private Message</h1>
+                        <h1 className="text-2xl font-bold">Private Capsule</h1>
                         <p className="text-gray-500 font-sans text-sm">
-                            This capsule is private. Only the person who created it can view it.
+                            This capsule is private. You need the special link from the creator to view it.
                         </p>
                     </div>
-
                     {!user ? (
                         <>
                             <p className="text-gray-400 font-sans text-xs">
@@ -192,7 +190,7 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                             </p>
                             <button
                                 onClick={signInWithGoogle}
-                                className="w-full flex items-center justify-center gap-3 py-3.5 px-6 bg-white border-2 border-gray-200 rounded-2xl font-semibold text-gray-700 font-sans hover:border-[var(--accent)] hover:shadow-md transition-all active:scale-95"
+                                className="w-full flex items-center justify-center gap-3 py-3.5 px-6 bg-white border-2 border-gray-200 rounded-2xl font-semibold text-gray-700 font-sans hover:border-accent hover:shadow-md transition-all active:scale-95"
                             >
                                 <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
                                     <path d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" fill="#FFC107" />
@@ -205,13 +203,14 @@ export default function ViewCapsuleClient({ capsule }: ViewCapsuleClientProps) {
                         </>
                     ) : (
                         <p className="text-gray-400 font-sans text-xs">
-                            You are signed in as <b>{user.email}</b>, but this capsule belongs to someone else.
+                            You are signed in as <b>{user.email}</b>, but don't have access to this private capsule.
                         </p>
                     )}
                 </motion.div>
             </div>
         );
     }
+
 
     const hasPreview = capsule.preview_url && capsule.preview_url.trim() !== '';
 

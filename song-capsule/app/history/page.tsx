@@ -18,6 +18,7 @@ interface CapsuleItem {
     album_art_url?: string;
     created_at: string;
     is_private?: boolean;
+    share_token?: string | null;
 }
 
 export default function HistoryPage() {
@@ -47,7 +48,7 @@ export default function HistoryPage() {
         setLoadingPrivate(true);
         supabase
             .from('capsules')
-            .select('id, receiver_name, track_name, artist_name, album_art_url, created_at, is_private')
+            .select('id, receiver_name, track_name, artist_name, album_art_url, created_at, is_private, share_token')
             .eq('owner_id', user.id)
             .eq('is_private', true)
             .order('created_at', { ascending: false })
@@ -62,13 +63,16 @@ export default function HistoryPage() {
         setPublicItems([]);
     };
 
-    const copyLink = (e: React.MouseEvent, id: string) => {
+    const copyLink = (e: React.MouseEvent, item: CapsuleItem) => {
         e.preventDefault();
         e.stopPropagation();
-        const link = `${window.location.origin}/view/${id}`;
+        const base = `${window.location.origin}/view/${item.id}`;
+        const link = (item.is_private && item.share_token) ? `${base}?key=${item.share_token}` : base;
         navigator.clipboard.writeText(link);
         toast.success('Link copied!');
     };
+
+
 
     const CapsuleCard = ({ item, isPrivate }: { item: CapsuleItem; isPrivate: boolean }) => (
         <motion.div
@@ -97,7 +101,7 @@ export default function HistoryPage() {
                         </div>
                         {/* Copy link button */}
                         <button
-                            onClick={(e) => copyLink(e, item.id)}
+                            onClick={(e) => copyLink(e, item)}
                             title="Copy link"
                             className="p-1.5 rounded-lg text-gray-300 hover:text-[var(--accent)] hover:bg-[var(--accent)]/8 transition-colors shrink-0"
                         >
