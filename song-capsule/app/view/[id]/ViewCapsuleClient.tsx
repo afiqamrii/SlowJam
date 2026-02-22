@@ -6,6 +6,7 @@ import { Lock, Play, Pause, Music2, Clock, Camera, ChevronDown, ChevronUp, Penci
 import Confetti from 'react-confetti';
 import ReactMarkdown from 'react-markdown';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 // ── Polaroid imports ────────────────────────────────────────────────────────
 import ImageCropper from '@/app/components/polaroid/ImageCropper';
@@ -149,6 +150,13 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
     // ── Export handler ──────────────────────────────────────────────────────
     const handleExport = useCallback(async () => {
         if (!imgProc.processedCanvas || !capsule) return;
+
+        // Track download in DB (fire and forget)
+        supabase.rpc('increment_polaroid_downloads', { target_capsule_id: capsule.id })
+            .then(({ error }) => {
+                if (error) console.error('Error incrementing polaroid downloads:', error);
+            });
+
         await exportPNG({
             croppedImageCanvas: imgProc.processedCanvas,
             trackName: capsule.track_name,

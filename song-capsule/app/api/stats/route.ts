@@ -13,22 +13,28 @@ export async function GET() {
         const [totalResult, privateResult, songsResult] = await Promise.all([
             supabase.from('capsules').select('*', { count: 'exact', head: true }),
             supabase.from('capsules').select('*', { count: 'exact', head: true }).eq('is_private', true),
-            supabase.from('capsules').select('track_name'),
+            supabase.from('capsules').select('track_name, polaroid_downloads'),
         ]);
 
         const total = totalResult.count ?? 0;
         const privateCapsules = privateResult.count ?? 0;
         const publicCapsules = total - privateCapsules;
 
-        // Count distinct track names
+        // Count distinct track names and sum polaroid downloads
         const allSongs = songsResult.data ?? [];
         const uniqueSongs = new Set(allSongs.map((r: { track_name: string }) => r.track_name)).size;
+
+        let polaroidDownloads = 0;
+        allSongs.forEach((r: { polaroid_downloads?: number }) => {
+            polaroidDownloads += (r.polaroid_downloads || 0);
+        });
 
         return NextResponse.json({
             total,
             public: publicCapsules,
             private: privateCapsules,
             uniqueSongs,
+            polaroidDownloads,
         });
     } catch (err) {
         console.error('[/api/stats] error:', err);
