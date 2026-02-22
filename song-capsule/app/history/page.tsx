@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Music2, Copy, Globe, Lock, Inbox, LogIn } from 'lucide-react';
+import { Clock, Music2, Copy, Globe, Lock, Inbox, LogIn, Pencil } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/app/hooks/useAuth';
 import { toast } from 'sonner';
@@ -23,23 +24,48 @@ interface CapsuleItem {
 
 export default function HistoryPage() {
     const { user, signInWithGoogle } = useAuth();
+    const router = useRouter();
     const [publicItems, setPublicItems] = useState<CapsuleItem[]>([]);
     const [privateItems, setPrivateItems] = useState<CapsuleItem[]>([]);
     const [loadingPrivate, setLoadingPrivate] = useState(false);
 
-    // Load public history from localStorage
+    // Load public history from localStorage, re-read on auth change
     useEffect(() => {
         try {
             const raw = localStorage.getItem(HISTORY_KEY);
             const all: CapsuleItem[] = raw ? JSON.parse(raw) : [];
-            // Only show non-private ones in the public section
-            setPublicItems(all.filter(i => !i.is_private));
+            const publicOnes = all.filter(i => !i.is_private);
+            setPublicItems(publicOnes);
+
+            // When signed in, refresh public item data from Supabase by ID
+            // (in case any field changed, or localStorage has stale data)
+            if (user && publicOnes.length > 0) {
+                const ids = publicOnes.map(i => i.id);
+                supabase
+                    .from('capsules')
+                    .select('id, receiver_name, track_name, artist_name, album_art_url, created_at, is_private, share_token')
+                    .in('id', ids)
+                    .then(({ data }) => {
+                        if (data && data.length > 0) {
+                            // Merge: DB data wins for items that exist, localStorage fills any gaps
+                            const byId: Record<string, CapsuleItem> = {};
+                            publicOnes.forEach(i => { byId[i.id] = i; });
+                            data.forEach(i => { byId[i.id] = i; });
+                            setPublicItems(Object.values(byId).sort(
+                                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                            ));
+                        }
+                    });
+            }
         } catch {
             setPublicItems([]);
         }
-    }, []);
+        // Re-run when user changes (handles OAuth redirect/session restore)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
 
-    // Load private capsules from Supabase when signed in
+    // Load capsules from Supabase when signed in
+    // Fetches ALL capsules (public + private) for the signed-in user
     useEffect(() => {
         if (!user) {
             setPrivateItems([]);
@@ -50,10 +76,23 @@ export default function HistoryPage() {
             .from('capsules')
             .select('id, receiver_name, track_name, artist_name, album_art_url, created_at, is_private, share_token')
             .eq('owner_id', user.id)
-            .eq('is_private', true)
             .order('created_at', { ascending: false })
             .then(({ data }) => {
-                setPrivateItems(data ?? []);
+                const all = data ?? [];
+                setPrivateItems(all.filter(i => i.is_private));
+
+                // Merge Supabase public items with localStorage public items
+                // Supabase wins (fresh data), localStorage fills gaps for old capsules
+                const supabasePublic = all.filter(i => !i.is_private);
+                setPublicItems(prev => {
+                    const byId: Record<string, CapsuleItem> = {};
+                    prev.forEach(i => { byId[i.id] = i; }); // localStorage first
+                    supabasePublic.forEach(i => { byId[i.id] = i; }); // Supabase wins
+                    return Object.values(byId).sort(
+                        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                    );
+                });
+
                 setLoadingPrivate(false);
             });
     }, [user]);
@@ -100,14 +139,24 @@ export default function HistoryPage() {
                             <p className="font-bold text-sm text-[var(--foreground)] truncate">{item.track_name}</p>
                             <p className="text-xs text-gray-400 truncate">{item.artist_name}</p>
                         </div>
-                        {/* Copy link button */}
-                        <button
-                            onClick={(e) => copyLink(e, item)}
-                            title="Copy link"
-                            className="p-1.5 rounded-lg text-gray-300 hover:text-[var(--accent)] hover:bg-[var(--accent)]/8 transition-colors shrink-0"
-                        >
-                            <Copy size={14} />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                            {/* Edit button */}
+                            <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/edit/${item.id}`); }}
+                                title="Edit capsule"
+                                className="p-1.5 rounded-lg text-gray-300 hover:text-[var(--accent)] hover:bg-[var(--accent)]/8 transition-colors"
+                            >
+                                <Pencil size={14} />
+                            </button>
+                            {/* Copy link button */}
+                            <button
+                                onClick={(e) => copyLink(e, item)}
+                                title="Copy link"
+                                className="p-1.5 rounded-lg text-gray-300 hover:text-[var(--accent)] hover:bg-[var(--accent)]/8 transition-colors"
+                            >
+                                <Copy size={14} />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="px-4 pb-3 flex items-center justify-between text-xs text-gray-400 font-sans border-t border-gray-50 pt-2">

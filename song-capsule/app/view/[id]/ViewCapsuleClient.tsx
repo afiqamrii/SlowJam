@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Play, Pause, Music2, Clock, Camera, ChevronDown, ChevronUp } from 'lucide-react';
+import { Lock, Play, Pause, Music2, Clock, Camera, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import Confetti from 'react-confetti';
 import ReactMarkdown from 'react-markdown';
+import { useRouter } from 'next/navigation';
 
 // ── Polaroid imports ────────────────────────────────────────────────────────
 import ImageCropper from '@/app/components/polaroid/ImageCropper';
@@ -23,6 +24,7 @@ interface ViewCapsuleClientProps {
 export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }: ViewCapsuleClientProps) {
     // Note: capsule is now passed as a prop, already fetched by the server
     const { user, loading: authLoading, signInWithGoogle } = useAuth();
+    const router = useRouter();
 
     const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
     const [isUnlocked, setIsUnlocked] = useState(false);
@@ -676,6 +678,24 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                 </div>
                             </motion.div>
                         </motion.div>
+
+                        {/* Owner Edit button */}
+                        {isOwner && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.6 }}
+                                className="flex justify-center mt-4"
+                            >
+                                <button
+                                    onClick={() => router.push(`/edit/${capsule.id}`)}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-sans font-semibold border-2 border-[var(--accent)]/30 text-[var(--accent)] hover:bg-[var(--accent)]/8 transition-colors"
+                                >
+                                    <Pencil size={14} />
+                                    Edit this capsule
+                                </button>
+                            </motion.div>
+                        )}
 
                         {/* Sent on timestamp */}
                         {capsule.created_at && (

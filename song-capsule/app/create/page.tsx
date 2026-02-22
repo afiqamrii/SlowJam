@@ -171,7 +171,7 @@ export default function CreateCapsule() {
                         song_meaning: aiMeaning,
                         unlock_at: unlockAt,
                         is_private: isPrivate ?? false,
-                        owner_id: isPrivate ? user?.id ?? null : null,
+                        owner_id: user?.id ?? null,
                         share_token: isPrivate ? crypto.randomUUID() : null,
                     },
                 ])

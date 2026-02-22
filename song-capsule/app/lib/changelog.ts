@@ -8,7 +8,7 @@
 // After bumping, add a new entry at the TOP of RELEASES.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = '1.1.2';
+export const APP_VERSION = '1.2.0';
 
 export interface Release {
     version: string;
@@ -24,9 +24,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
     {
-        version: '1.1.2',
+        version: '1.2.0',
         date: '2026-02-22',
         highlights: [
+            {
+                emoji: '✏️',
+                title: 'Edit your capsule',
+                desc: 'Change the message, recipient, unlock date or privacy — only you can edit your own capsule.',
+                href: '/history',
+                cta: 'My capsules →',
+            },
             {
                 emoji: '📊',
                 title: 'Live stats',
@@ -35,18 +42,11 @@ export const RELEASES: Release[] = [
                 cta: 'See stats →',
             },
             {
-                emoji: '🎴',
+                emoji: '�',
                 title: 'Capsule card stack',
                 desc: 'Drag or tap through real capsules — hit Shuffle for a fresh batch.',
                 href: '/#capsule-feed',
                 cta: 'Try it →',
-            },
-            {
-                emoji: '🏷️',
-                title: 'Browse stats strip',
-                desc: 'Quick stats pills above the search bar in Browse.',
-                href: '/browse',
-                cta: 'Go to Browse →',
             },
         ],
     },
