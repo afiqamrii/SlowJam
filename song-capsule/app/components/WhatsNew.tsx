@@ -32,6 +32,13 @@ export default function WhatsNew() {
     }, [open]);
 
     const handleOpen = () => {
+        // On narrow screens the popover has no anchor — open the banner modal instead
+        if (window.innerWidth < 640) {
+            window.dispatchEvent(new CustomEvent('slowjam:open-whats-new'));
+            localStorage.setItem(STORAGE_KEY, APP_VERSION);
+            setHasNew(false);
+            return;
+        }
         setOpen(true);
         localStorage.setItem(STORAGE_KEY, APP_VERSION);
         setHasNew(false);
@@ -73,7 +80,7 @@ export default function WhatsNew() {
                 aria-label="What's new"
             >
                 <Sparkles size={12} />
-                <span className="hidden sm:inline">What&apos;s new</span>
+                <span>What&apos;s new</span>
 
                 {/* Pulsing dot badge */}
                 {hasNew && (

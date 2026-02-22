@@ -19,6 +19,13 @@ export default function WhatsNewBanner() {
         if (seen !== APP_VERSION) setBannerVisible(true);
     }, []);
 
+    // Listen for event fired by the navbar WhatsNew button on mobile
+    useEffect(() => {
+        const handler = () => setModalOpen(true);
+        window.addEventListener('slowjam:open-whats-new', handler);
+        return () => window.removeEventListener('slowjam:open-whats-new', handler);
+    }, []);
+
     const dismissBanner = (e: React.MouseEvent) => {
         e.stopPropagation();
         localStorage.setItem(STORAGE_KEY, APP_VERSION);
