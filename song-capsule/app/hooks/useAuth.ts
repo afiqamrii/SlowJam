@@ -24,7 +24,7 @@ export function useAuth() {
         return () => subscription.unsubscribe();
     }, []);
 
-    const signInWithGoogle = async () => {
+    const signInWithGoogle = async (redirectTo?: string) => {
         // Google blocks OAuth in in-app browsers (Threads, Instagram, WhatsApp, TikTok, etc.)
         // Detect and warn the user to open in a real browser instead
         const ua = navigator.userAgent || '';
@@ -37,10 +37,13 @@ export function useAuth() {
             return;
         }
 
+        // Default to returning to the EXACT page they clicked sign-in from
+        const finalRedirect = redirectTo ?? window.location.pathname;
+
         await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/create`,
+                redirectTo: `${window.location.origin}${finalRedirect}`,
             },
         });
     };

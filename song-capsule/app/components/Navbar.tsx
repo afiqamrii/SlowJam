@@ -159,7 +159,7 @@ export default function Navbar() {
                             </div>
                         ) : (
                             <button
-                                onClick={signInWithGoogle}
+                                onClick={() => signInWithGoogle()}
                                 className="ml-2 flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold font-sans text-[var(--accent)] border border-[var(--accent)]/40 rounded-full hover:bg-[var(--accent)]/8 transition-colors"
                             >
                                 <LogIn size={14} />

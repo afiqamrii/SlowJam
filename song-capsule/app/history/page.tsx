@@ -236,7 +236,7 @@ export default function HistoryPage() {
                             </div>
                             {!user && (
                                 <button
-                                    onClick={signInWithGoogle}
+                                    onClick={() => signInWithGoogle()}
                                     className="flex items-center gap-1.5 text-xs font-sans font-semibold text-[var(--accent)] hover:underline"
                                 >
                                     <LogIn size={12} /> Sign in to view yours
@@ -249,7 +249,7 @@ export default function HistoryPage() {
                                 <Lock size={22} className="text-[var(--accent)]/40" />
                                 <p className="text-sm font-sans text-gray-400">Sign in with Google to see your private capsules — they live in the cloud, not just this browser.</p>
                                 <button
-                                    onClick={signInWithGoogle}
+                                    onClick={() => signInWithGoogle()}
                                     className="mt-1 flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-full text-xs font-sans font-bold hover:bg-[#c0684b] transition-colors"
                                 >
                                     <LogIn size={13} /> Sign in
