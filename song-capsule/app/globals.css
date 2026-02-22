@@ -44,3 +44,46 @@ body::before {
   z-index: -1;
   pointer-events: none;
 }
+
+/* ── Blob ambient animations (CSS = compositor thread, no JS overhead) ── */
+@keyframes blob1 {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes blob2 {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.07);
+  }
+}
+
+.animate-blob1 {
+  animation: blob1 14s ease-in-out infinite;
+}
+
+.animate-blob2 {
+  animation: blob2 18s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+
+  .animate-blob1,
+  .animate-blob2 {
+    animation: none;
+  }
+}

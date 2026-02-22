@@ -28,18 +28,14 @@ export default function Home() {
 
       {/* ── HERO ── */}
       <section className="relative flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] w-full px-6 text-center pb-20">
-        {/* Ambient blobs */}
-        <motion.div
-          animate={{ scale: [1, 1.12, 1], rotate: [0, 15, 0] }}
-          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-16 left-1/4 w-72 h-72 rounded-full blur-3xl opacity-30 pointer-events-none"
-          style={{ background: "radial-gradient(circle, #d97757, transparent)" }}
+        {/* Ambient blobs — CSS animated for compositor-thread perf */}
+        <div
+          className="absolute top-16 left-1/4 w-72 h-72 rounded-full blur-2xl opacity-20 pointer-events-none animate-blob1"
+          style={{ background: 'radial-gradient(circle, #d97757, transparent)', willChange: 'transform' }}
         />
-        <motion.div
-          animate={{ scale: [1, 1.08, 1], rotate: [0, -10, 0] }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute bottom-24 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-25 pointer-events-none"
-          style={{ background: "radial-gradient(circle, #8c9b78, transparent)" }}
+        <div
+          className="absolute bottom-24 right-1/4 w-80 h-80 rounded-full blur-2xl opacity-15 pointer-events-none animate-blob2"
+          style={{ background: 'radial-gradient(circle, #8c9b78, transparent)', willChange: 'transform' }}
         />
 
         {/* Spinning vinyl ring */}
@@ -53,7 +49,7 @@ export default function Home() {
             animate={{ rotate: 360 }}
             transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
             className="w-24 h-24 rounded-full border-4 border-dashed opacity-40"
-            style={{ borderColor: "#d97757" }}
+            style={{ borderColor: "#d97757", willChange: 'transform' }}
           />
           <div className="absolute inset-0 flex items-center justify-center">
             <Music size={40} className="text-accent" />
