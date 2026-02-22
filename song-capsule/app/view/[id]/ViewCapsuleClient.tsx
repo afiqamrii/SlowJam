@@ -191,7 +191,7 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                 If this is your capsule, sign in to access it.
                             </p>
                             <button
-                                onClick={signInWithGoogle}
+                                onClick={() => signInWithGoogle()}
                                 className="w-full flex items-center justify-center gap-3 py-3.5 px-6 bg-white border-2 border-gray-200 rounded-2xl font-semibold text-gray-700 font-sans hover:border-accent hover:shadow-md transition-all active:scale-95"
                             >
                                 <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
