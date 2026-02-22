@@ -65,36 +65,63 @@ export default function HistoryPage() {
     }, [user]);
 
     // Load capsules from Supabase when signed in
-    // Fetches ALL capsules (public + private) for the signed-in user
+    // 1. First, claim any localStorage capsules that still have owner_id = null
+    // 2. Then, fetch ALL capsules by owner_id (includes newly claimed ones)
     useEffect(() => {
         if (!user) {
             setPrivateItems([]);
             return;
         }
         setLoadingPrivate(true);
-        supabase
-            .from('capsules')
-            .select('id, receiver_name, track_name, artist_name, album_art_url, created_at, is_private, share_token')
-            .eq('owner_id', user.id)
-            .order('created_at', { ascending: false })
-            .then(({ data }) => {
-                const all = data ?? [];
-                setPrivateItems(all.filter(i => i.is_private));
 
-                // Merge Supabase public items with localStorage public items
-                // Supabase wins (fresh data), localStorage fills gaps for old capsules
-                const supabasePublic = all.filter(i => !i.is_private);
-                setPublicItems(prev => {
-                    const byId: Record<string, CapsuleItem> = {};
-                    prev.forEach(i => { byId[i.id] = i; }); // localStorage first
-                    supabasePublic.forEach(i => { byId[i.id] = i; }); // Supabase wins
-                    return Object.values(byId).sort(
-                        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                    );
-                });
+        const run = async () => {
+            // Step 1: Claim unowned capsules that belong to this browser session
+            try {
+                const raw = localStorage.getItem(HISTORY_KEY);
+                const all: CapsuleItem[] = raw ? JSON.parse(raw) : [];
+                const localIds = all.map(i => i.id).filter(Boolean);
 
-                setLoadingPrivate(false);
+                if (localIds.length > 0) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.access_token) {
+                        await fetch('/api/claim-capsules', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${session.access_token}`,
+                            },
+                            body: JSON.stringify({ ids: localIds, userId: user.id }),
+                        });
+                        // (Silently ignore errors — claiming is best-effort)
+                    }
+                }
+            } catch { /* best effort */ }
+
+            // Step 2: Now fetch all capsules owned by this user (includes newly claimed)
+            const { data } = await supabase
+                .from('capsules')
+                .select('id, receiver_name, track_name, artist_name, album_art_url, created_at, is_private, share_token')
+                .eq('owner_id', user.id)
+                .order('created_at', { ascending: false });
+
+            const owned = data ?? [];
+            setPrivateItems(owned.filter(i => i.is_private));
+
+            // Merge Supabase public items with localStorage (localStorage fills gaps for old capsules)
+            const supabasePublic = owned.filter(i => !i.is_private);
+            setPublicItems(prev => {
+                const byId: Record<string, CapsuleItem> = {};
+                prev.forEach(i => { byId[i.id] = i; }); // localStorage first
+                supabasePublic.forEach(i => { byId[i.id] = i; }); // Supabase wins
+                return Object.values(byId).sort(
+                    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
             });
+
+            setLoadingPrivate(false);
+        };
+
+        run();
     }, [user]);
 
     const clearPublic = () => {
