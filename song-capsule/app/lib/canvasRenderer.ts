@@ -68,7 +68,21 @@ function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
     const lines: string[] = [];
-    for (const para of text.split('\n')) {
+    const paragraphs = text.split('\n');
+    // Collapse consecutive empty lines into a single one
+    const collapsed: string[] = [];
+    let lastWasEmpty = false;
+    for (const p of paragraphs) {
+        const isEmpty = !p.trim();
+        if (isEmpty && lastWasEmpty) continue; // skip duplicate blanks
+        collapsed.push(p);
+        lastWasEmpty = isEmpty;
+    }
+    // Remove leading/trailing blank lines
+    while (collapsed.length && !collapsed[0].trim()) collapsed.shift();
+    while (collapsed.length && !collapsed[collapsed.length - 1].trim()) collapsed.pop();
+
+    for (const para of collapsed) {
         if (!para.trim()) { lines.push(''); continue; }
         let cur = '';
         for (const word of para.split(' ')) {
@@ -79,6 +93,11 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): st
         if (cur) lines.push(cur);
     }
     return lines;
+}
+
+// Total rendered height, counting blank lines at half height
+function totalTextHeight(lines: string[], lineH: number): number {
+    return lines.reduce((sum, l) => sum + (l === '' ? lineH * 0.5 : lineH), 0);
 }
 
 async function loadBitmap(url: string): Promise<ImageBitmap | null> {
@@ -365,12 +384,12 @@ export async function renderPolaroidToCanvas(
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
-    // Bigger starting sizes (+6 across all tiers)
+    // Starting font size based on message length
     let fontSize = message.length > 200 ? 26 : message.length > 100 ? 32 : 38;
     ctx.font = `${fontSize}px "Gloria Hallelujah", cursive`;
     let lines = wrapText(ctx, message, msgMaxW);
     let lineH = fontSize * 1.65;
-    let totalMH = lines.length * lineH;
+    let totalMH = totalTextHeight(lines, lineH);
 
     // Shrink until all lines fit
     while (totalMH > msgAvailH && fontSize > 14) {
@@ -378,14 +397,14 @@ export async function renderPolaroidToCanvas(
         ctx.font = `${fontSize}px "Gloria Hallelujah", cursive`;
         lines = wrapText(ctx, message, msgMaxW);
         lineH = fontSize * 1.65;
-        totalMH = lines.length * lineH;
+        totalMH = totalTextHeight(lines, lineH);
     }
 
-    // Vertically center in space
+    // Vertically center in available space
     let ty = curContentY + Math.max(0, (msgAvailH - totalMH) / 2);
     for (const line of lines) {
         ctx.fillText(line, contentCX, ty);
-        ty += lineH;
+        ty += line === '' ? lineH * 0.5 : lineH;  // blank lines take half height
     }
     ctx.restore();
 

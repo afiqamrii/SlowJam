@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Music2, Lock, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -13,6 +13,9 @@ export default function BrowsePage() {
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
+    const scrollRestored = useRef(false);
+
+    const SCROLL_KEY = 'browse_scroll_pos';
 
     const PAGE_SIZE = 12;
 
@@ -57,6 +60,18 @@ export default function BrowsePage() {
             setLoadingMore(false);
         }
     };
+
+    // Restore scroll position after data loads
+    useEffect(() => {
+        if (!loading && !scrollRestored.current) {
+            const saved = sessionStorage.getItem(SCROLL_KEY);
+            if (saved) {
+                window.scrollTo({ top: parseInt(saved), behavior: 'instant' as ScrollBehavior });
+                sessionStorage.removeItem(SCROLL_KEY);
+            }
+            scrollRestored.current = true;
+        }
+    }, [loading]);
 
     // Initial fetch and search changes
     useEffect(() => {
@@ -133,7 +148,11 @@ export default function BrowsePage() {
                                         transition={{ delay: (i % PAGE_SIZE) * 0.04 }}
                                         layout
                                     >
-                                        <Link href={`/view/${capsule.id}`} className="block h-full">
+                                        <Link
+                                            href={`/view/${capsule.id}`}
+                                            className="block h-full"
+                                            onClick={() => sessionStorage.setItem(SCROLL_KEY, String(window.scrollY))}
+                                        >
                                             <div className="h-full bg-white border border-gray-100 hover:border-(--accent)/30 hover:shadow-lg shadow-sm rounded-2xl overflow-hidden flex flex-col transition-all group">
                                                 {/* Card body */}
                                                 <div className="flex-1 p-5 space-y-3">
