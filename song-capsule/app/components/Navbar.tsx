@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Send, Menu, LogOut, LogIn } from 'lucide-react';
 import GradientText from './GradientText';
 import { useAuth } from '@/app/hooks/useAuth';
+import WhatsNew from './WhatsNew';
 
 const NAV_LINKS = [
     { label: 'Create', href: '/create' },
@@ -96,6 +97,9 @@ export default function Navbar() {
                         >
                             Support
                         </button>
+
+                        {/* What's New */}
+                        <WhatsNew />
 
                         {/* Auth section */}
                         {user ? (
@@ -202,6 +206,10 @@ export default function Navbar() {
                                 >
                                     Support
                                 </button>
+                                {/* What's New — mobile */}
+                                <div className="px-1 py-1" onClick={() => setMobileOpen(false)}>
+                                    <WhatsNew />
+                                </div>
 
                                 {/* Mobile auth */}
                                 <div className="pt-1 mt-1 border-t border-gray-100">

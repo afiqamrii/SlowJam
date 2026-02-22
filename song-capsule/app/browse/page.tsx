@@ -2,9 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Music2, Lock, ExternalLink } from 'lucide-react';
+import { Search, Music2, Lock, Globe, Music } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+
+interface BrowseStats {
+    total: number;
+    public: number;
+    uniqueSongs: number;
+}
 
 export default function BrowsePage() {
     const [capsules, setCapsules] = useState<any[]>([]);
@@ -14,6 +20,7 @@ export default function BrowsePage() {
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const scrollRestored = useRef(false);
+    const [browseStats, setBrowseStats] = useState<BrowseStats | null>(null);
 
     const SCROLL_KEY = 'browse_scroll_pos';
 
@@ -73,6 +80,14 @@ export default function BrowsePage() {
         }
     }, [loading]);
 
+    // Fetch stats once
+    useEffect(() => {
+        fetch('/api/stats')
+            .then(r => r.json())
+            .then((d) => setBrowseStats({ total: d.total, public: d.public, uniqueSongs: d.uniqueSongs }))
+            .catch(() => { /* fail silently */ });
+    }, []);
+
     // Initial fetch and search changes
     useEffect(() => {
         setPage(0);
@@ -87,7 +102,7 @@ export default function BrowsePage() {
     };
 
     return (
-        <div className="min-h-screen pt-20 pb-12 px-5 max-w-4xl mx-auto font-(--font-gloria)">
+        <div className="min-h-screen pt-20 pb-12 px-5 max-w-4xl mx-auto font-(--font-gloria) overflow-x-hidden">
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -12 }}
@@ -108,6 +123,34 @@ export default function BrowsePage() {
                     </span>
                 </div>
             </motion.div>
+
+            {/* ── Stats Strip ── */}
+            {browseStats && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
+                    className="flex flex-wrap gap-2 mb-6"
+                >
+                    {[
+                        { icon: <span className="text-sm">🎁</span>, label: `${browseStats.total.toLocaleString()} capsules total`, color: '#d97757', bg: 'rgba(217,119,87,0.08)', border: 'rgba(217,119,87,0.25)' },
+                        { icon: <Globe size={13} className="shrink-0" />, label: `${browseStats.public.toLocaleString()} public`, color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.25)' },
+                        { icon: <Music size={13} className="shrink-0" />, label: `${browseStats.uniqueSongs.toLocaleString()} unique songs`, color: '#8c9b78', bg: 'rgba(140,155,120,0.10)', border: 'rgba(140,155,120,0.25)' },
+                    ].map((s, i) => (
+                        <motion.span
+                            key={i}
+                            initial={{ opacity: 0, scale: 0.88 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.35, delay: 0.15 + i * 0.08 }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-sans font-semibold"
+                            style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.color }}
+                        >
+                            {s.icon}
+                            {s.label}
+                        </motion.span>
+                    ))}
+                </motion.div>
+            )}
 
             {/* Search bar */}
             <div className="relative mb-8">
@@ -135,8 +178,8 @@ export default function BrowsePage() {
                 </div>
             ) : (
                 <>
-                    <AnimatePresence mode="popLayout">
-                        <div className="grid sm:grid-cols-2 gap-4">
+                    <AnimatePresence>
+                        <div className="grid sm:grid-cols-2 gap-4 w-full min-w-0">
                             {capsules.map((capsule, i) => {
                                 const isLocked = new Date(capsule.unlock_at) > new Date();
                                 return (
@@ -144,16 +187,16 @@ export default function BrowsePage() {
                                         key={capsule.id}
                                         initial={{ opacity: 0, y: 16 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        exit={{ opacity: 0 }}
                                         transition={{ delay: (i % PAGE_SIZE) * 0.04 }}
-                                        layout
+                                        className="min-w-0 w-full"
                                     >
                                         <Link
                                             href={`/view/${capsule.id}`}
                                             className="block h-full"
                                             onClick={() => sessionStorage.setItem(SCROLL_KEY, String(window.scrollY))}
                                         >
-                                            <div className="h-full bg-white border border-gray-100 hover:border-(--accent)/30 hover:shadow-lg shadow-sm rounded-2xl overflow-hidden flex flex-col transition-all group">
+                                            <div className="w-full h-full bg-white border border-gray-100 hover:border-(--accent)/30 hover:shadow-lg shadow-sm rounded-2xl overflow-hidden flex flex-col transition-all group">
                                                 {/* Card body */}
                                                 <div className="flex-1 p-5 space-y-3">
                                                     {/* To: badge */}

@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { Music, Clock, Send, Heart, Headphones, Gift, Camera } from "lucide-react";
 import SplitText from "./components/SplitText";
 import CurvedLoop from "./components/CurvedLoop";
+import StatsBar from "./components/StatsBar";
+import LatestCapsulesStack from "./components/LatestCapsulesStack";
 // Heart is kept for the feelings section
 
 const steps = [
@@ -157,6 +159,16 @@ export default function Home() {
           className="text-[5rem] font-bold uppercase fill-[#d97757] opacity-15"
         />
       </section>
+
+      {/* ── LIVE STATS ── */}
+      <div id="stats">
+        <StatsBar />
+      </div>
+
+      {/* ── LATEST CAPSULES STACK ── */}
+      <div id="capsule-feed">
+        <LatestCapsulesStack />
+      </div>
 
       {/* ── HOW IT WORKS ── */}
       <section className="w-full max-w-5xl px-6 py-24">

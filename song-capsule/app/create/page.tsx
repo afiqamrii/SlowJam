@@ -304,7 +304,7 @@ export default function CreateCapsule() {
                                 </div>
                                 <div className="flex-1">
                                     <p className="font-bold text-lg text-[var(--foreground)]">Private</p>
-                                    <p className="text-sm text-gray-500 font-sans">Only visible to you — requires sign in</p>
+                                    <p className="text-sm text-gray-500 font-sans">Only visible to you — requires sign in and only people with the unique link can view it.</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
                                     <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-sans font-semibold">Free</span>
