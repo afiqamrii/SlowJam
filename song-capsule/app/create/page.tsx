@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ArrowRight, Calendar, Lock, Check, Copy, Clock, Zap, ChevronLeft, Globe, Camera, ChevronUp, ChevronDown, Image as ImageIcon } from 'lucide-react';
+import { Search, ArrowRight, Calendar, Lock, Check, Copy, Clock, Zap, ChevronLeft, Mail, Globe, Camera, ChevronUp, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -27,6 +27,8 @@ export default function CreateCapsule() {
     const [isPrivate, setIsPrivate] = useState<boolean | null>(null);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [receiverName, setReceiverName] = useState('');
+    const [sendAnonymously, setSendAnonymously] = useState(false);
+    const [receiverEmail, setReceiverEmail] = useState('');
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<any[]>([]);
     const [selectedTrack, setSelectedTrack] = useState<any>(null);
@@ -210,6 +212,8 @@ export default function CreateCapsule() {
                 .insert([
                     {
                         receiver_name: receiverName,
+                        receiver_email: sendAnonymously && receiverEmail.trim() ? receiverEmail.trim() : null,
+                        email_sent: false,
                         spotify_track_id: selectedTrack.id,
                         track_name: selectedTrack.name,
                         artist_name: selectedTrack.artists[0].name,
@@ -230,6 +234,26 @@ export default function CreateCapsule() {
             const newToken = isPrivate ? (data.share_token ?? null) : null;
             setCapsuleId(data.id);
             setShareToken(newToken);
+
+            // If sending now, trigger instant email delivery
+            if (sendNow && sendAnonymously && receiverEmail.trim()) {
+                const capsuleUrl = `${window.location.origin}/view/${data.id}${isPrivate && newToken ? `?key=${newToken}` : ''}`;
+
+                // Do not await to avoid blocking the UI success page transition too much, though waiting is fine for reliability.
+                fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        receiverEmail: receiverEmail.trim(),
+                        receiverName,
+                        capsuleUrl
+                    })
+                }).then(async (res) => {
+                    if (res.ok) {
+                        await supabase.from('capsules').update({ email_sent: true }).eq('id', data.id);
+                    }
+                }).catch(err => console.error("Error triggering instant email:", err));
+            }
 
             // Save to localStorage for History page (public only — private are fetched from Supabase)
             try {
@@ -381,16 +405,67 @@ export default function CreateCapsule() {
                         className="w-full space-y-6"
                     >
                         <h2 className="text-3xl font-bold text-center">Who is this for?</h2>
-                        <input
-                            type="text"
-                            value={receiverName}
-                            onChange={(e) => setReceiverName(e.target.value)}
-                            placeholder="Enter their name..."
-                            className="w-full bg-white border border-[var(--border)] rounded-full py-4 px-6 text-lg text-[var(--foreground)] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] shadow-sm"
-                        />
+
+                        <div className="space-y-4">
+                            <input
+                                type="text"
+                                value={receiverName}
+                                onChange={(e) => setReceiverName(e.target.value)}
+                                placeholder="Enter their name..."
+                                className="w-full bg-white border border-[var(--border)] rounded-full py-4 px-6 text-lg text-[var(--foreground)] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] shadow-sm"
+                            />
+
+                            <div className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden transition-all shadow-sm">
+                                <label className="flex items-start gap-4 cursor-pointer p-4 hover:bg-gray-50 transition-colors">
+                                    <div className="relative flex items-center mt-1">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={sendAnonymously}
+                                            onChange={(e) => {
+                                                setSendAnonymously(e.target.checked);
+                                                if (!e.target.checked) setReceiverEmail('');
+                                            }}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)]"></div>
+                                    </div>
+                                    <div>
+                                        <span className="font-bold text-[var(--foreground)] block">Secretly deliver to their email</span>
+                                        <span className="text-sm text-gray-500 mt-1 block">Want to keep it a secret? We'll email them the capsule, and your identity will remain hidden.</span>
+                                    </div>
+                                </label>
+
+                                <AnimatePresence>
+                                    {sendAnonymously && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="overflow-hidden bg-gray-50 border-t border-[var(--border)]"
+                                        >
+                                            <div className="p-4">
+                                                <div className="relative">
+                                                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--accent)] pointer-events-none">
+                                                        <Mail size={20} />
+                                                    </div>
+                                                    <input
+                                                        type="email"
+                                                        value={receiverEmail}
+                                                        onChange={(e) => setReceiverEmail(e.target.value)}
+                                                        placeholder="Their email address..."
+                                                        className="w-full bg-white border border-[var(--border)] rounded-full py-3.5 pl-14 pr-6 text-base text-[var(--foreground)] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all shadow-inner"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </div>
+
                         <button
                             onClick={nextStep}
-                            disabled={!receiverName.trim()}
+                            disabled={!receiverName.trim() || (sendAnonymously && !receiverEmail.includes('@'))}
                             className="w-full py-4 bg-[var(--accent)] text-white rounded-full font-bold hover:bg-[#c0684b] disabled:opacity-50 transition-colors"
                         >
                             Next
