@@ -40,10 +40,7 @@ export async function POST(request: Request) {
             const eventTitle = `Unlock Song Capsule from ${receiverName || 'Someone'}`;
             const eventDetails = `Your time capsule is ready to open!\n\nListen here: ${capsuleUrl}`;
 
-            // Google Calendar Link
-            const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventTitle)}&dates=${startDateStr}/${endDateStr}&details=${encodeURIComponent(eventDetails)}`;
-
-            // Create ICS File Link via API
+            // Create ICS File Link via API (Handles all native calendars)
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://slowjam.xyz');
             const icsUrl = `${baseUrl}/api/calendar?title=${encodeURIComponent(eventTitle)}&start=${startDateStr}&end=${endDateStr}&details=${encodeURIComponent(eventDetails)}`;
 
@@ -62,15 +59,11 @@ export async function POST(request: Request) {
                     </a>
                 </div>
                 
-                <div style="margin-bottom: 16px; font-size: 14px; color: #555;"><strong>Add a reminder to your phone calendar:</strong></div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <a href="${googleCalendarUrl}" target="_blank"
-                    style="display:inline-block; padding:10px 16px; font-size:13px; font-weight:500; color:#444; background:#f4f4f5; text-decoration:none; border-radius:6px; border: 1px solid #e4e4e7;">
-                    📅 Google Calendar
-                    </a>
+                <div style="margin-bottom: 16px; font-size: 14px; color: #555;"><strong>Get reminded when it opens:</strong></div>
+                <div style="display: flex; gap: 8px;">
                     <a href="${icsUrl}" download="capsule-reminder.ics"
-                    style="display:inline-block; padding:10px 16px; font-size:13px; font-weight:500; color:#444; background:#f4f4f5; text-decoration:none; border-radius:6px; border: 1px solid #e4e4e7;">
-                    📅 Apple / Phone Calendar
+                    style="display:inline-block; padding:10px 20px; font-size:13px; font-weight:500; color:#111; background:#f4f4f5; text-decoration:none; border-radius:6px; border: 1px solid #e4e4e7;">
+                    📅 Add to Calendar
                     </a>
                 </div>
                 <div style="margin-top: 24px; font-size: 13px; color: #777;">

@@ -812,38 +812,14 @@ export default function CreateCapsule() {
                                             const capsuleUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/view/${capsuleId}${isPrivate && shareToken ? `?key=${shareToken}` : ''}`;
                                             const eventDetails = encodeURIComponent(`The time capsule is ready to open!\n\nLink: ${capsuleUrl}`);
 
-                                            // Ensure local time correctly aligns with google calendar via Z-stripped parameters or explicit timezone handling
-                                            // The simplest reliable way for Google Calendar URLs cross-timezone is omitting the Z but using the local YYYYMMDDTHHMMSS format.
-                                            // Adjusting for Google calendar format expectations for local time:
-                                            const localStartStr =
-                                                dateObj.getFullYear().toString() +
-                                                (dateObj.getMonth() + 1).toString().padStart(2, '0') +
-                                                dateObj.getDate().toString().padStart(2, '0') + 'T' +
-                                                dateObj.getHours().toString().padStart(2, '0') +
-                                                dateObj.getMinutes().toString().padStart(2, '0') + '00';
-
-                                            const localEndStr =
-                                                endDateObj.getFullYear().toString() +
-                                                (endDateObj.getMonth() + 1).toString().padStart(2, '0') +
-                                                endDateObj.getDate().toString().padStart(2, '0') + 'T' +
-                                                endDateObj.getHours().toString().padStart(2, '0') +
-                                                endDateObj.getMinutes().toString().padStart(2, '0') + '00';
-
-                                            const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=${localStartStr}/${localEndStr}&details=${eventDetails}`;
-
                                             // Provide absolute URL relative to current domain
                                             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
                                             const icsUrl = `${baseUrl}/api/calendar?title=${eventTitle}&start=${startDateStr}&end=${endDateStr}&details=${eventDetails}`;
 
                                             return (
-                                                <>
-                                                    <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-colors">
-                                                        Google Calendar
-                                                    </a>
-                                                    <a href={icsUrl} download="capsule-reminder.ics" className="flex-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-colors">
-                                                        Apple / Phone Calendar
-                                                    </a>
-                                                </>
+                                                <a href={icsUrl} download="capsule-reminder.ics" className="w-full bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl text-sm font-bold text-center transition-colors shadow-sm">
+                                                    📅 Add to Calendar
+                                                </a>
                                             );
                                         })()}
                                     </div>

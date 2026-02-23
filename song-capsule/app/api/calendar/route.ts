@@ -19,6 +19,11 @@ export async function GET(request: Request) {
         `DTEND:${end}\n` +
         `SUMMARY:${title}\n` +
         `DESCRIPTION:${details ? details.replace(/\n/g, '\\n') : ''}\n` +
+        `BEGIN:VALARM\n` +
+        `TRIGGER:-PT5M\n` +
+        `ACTION:DISPLAY\n` +
+        `DESCRIPTION:Reminder\n` +
+        `END:VALARM\n` +
         `END:VEVENT\n` +
         `END:VCALENDAR`;
 
