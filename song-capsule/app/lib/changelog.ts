@@ -31,7 +31,7 @@ export const RELEASES: Release[] = [
                 emoji: '💖',
                 title: 'Save Your Favorite Capsules',
                 desc: 'You can now "heart" your favorite capsules to save them as inspiration for later! Find them all neatly organized in your new "Saved" tab, and easily sort the Browse page by Highest Saves.',
-                href: '/history',
+                href: '/saved',
                 cta: 'My capsules',
             },
             {

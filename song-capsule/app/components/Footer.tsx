@@ -31,7 +31,7 @@ export default function Footer() {
                             >
                                 SlowJam
                             </GradientText>
-                            <span>— send a song to the future.</span>
+
                         </div>
                         <button
                             onClick={() => setSupportOpen(true)}

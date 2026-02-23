@@ -40,6 +40,13 @@ export function useAuth() {
         // Default to returning to the EXACT page they clicked sign-in from
         const finalRedirect = redirectTo ?? window.location.pathname;
 
+        // Save scroll position before redirecting so we can restore it when returning
+        try {
+            sessionStorage.setItem('authRedirectScrollY', window.scrollY.toString());
+        } catch (e) {
+            // Ignore sessionStorage errors (e.g. private mode)
+        }
+
         await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {

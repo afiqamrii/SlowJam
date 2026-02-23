@@ -82,6 +82,27 @@ function BrowseContent() {
             .catch(() => { /* fail silently */ });
     }, []);
 
+    // Restore scroll position after returning from sign-in
+    useEffect(() => {
+        if (!isValidating && data && data.length > 0) {
+            try {
+                const savedScrollY = sessionStorage.getItem('authRedirectScrollY');
+                if (savedScrollY) {
+                    const y = parseInt(savedScrollY, 10);
+                    if (!isNaN(y)) {
+                        // Use a short timeout to let the DOM settle after render
+                        setTimeout(() => {
+                            window.scrollTo({ top: y, behavior: 'auto' });
+                            sessionStorage.removeItem('authRedirectScrollY');
+                        }, 50);
+                    }
+                }
+            } catch (e) {
+                // Ignore sessionStorage errors
+            }
+        }
+    }, [isValidating, data]);
+
     const handleLoadMore = () => {
         setSize(size + 1);
     };
