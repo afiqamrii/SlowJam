@@ -8,7 +8,7 @@
 // After bumping, add a new entry at the TOP of RELEASES.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = '1.3.0';
+export const APP_VERSION = '1.3.1';
 
 export interface Release {
     version: string;
@@ -24,9 +24,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
     {
-        version: '1.3.0',
+        version: '1.3.1',
         date: new Date().toISOString().split('T')[0],
         highlights: [
+            {
+                emoji: '💖',
+                title: 'Save Your Favorite Capsules',
+                desc: 'You can now "heart" your favorite capsules to save them as inspiration for later! Find them all neatly organized in your new "Saved" tab, and easily sort the Browse page by Highest Saves.',
+                href: '/history',
+                cta: 'My capsules →',
+            },
             {
                 emoji: '📅',
                 title: 'Calendar Reminders',
@@ -41,26 +48,13 @@ export const RELEASES: Release[] = [
                 href: '/create',
                 cta: 'Send one →',
             },
-            {
-                emoji: '💖',
-                title: 'Save Your Favorite Capsules',
-                desc: 'You can now "heart" your favorite capsules to save them as inspiration for later! Find them all neatly organized in your new "Saved" tab, and easily sort the Browse page by Highest Saves.',
-                href: '/history',
-                cta: 'My capsules →',
-            },
+
             {
                 emoji: '✏️',
                 title: 'Edit your capsule',
                 desc: 'Change the message, recipient, unlock date or privacy — only you can edit your own capsule.',
                 href: '/history',
                 cta: 'My capsules →',
-            },
-            {
-                emoji: '📊',
-                title: 'Live stats',
-                desc: 'Homepage now shows real-time capsule counts and unique songs.',
-                href: '/#stats',
-                cta: 'See stats →',
             },
         ],
     },
