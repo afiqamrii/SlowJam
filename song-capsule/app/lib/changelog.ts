@@ -8,7 +8,7 @@
 // After bumping, add a new entry at the TOP of RELEASES.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.3.0';
 
 export interface Release {
     version: string;
@@ -23,6 +23,40 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+    {
+        version: '1.3.0',
+        date: new Date().toISOString().split('T')[0],
+        highlights: [
+            {
+                emoji: '📅',
+                title: 'Calendar Reminders',
+                desc: 'Never miss an unlock! You and the receiver can now instantly add scheduled capsules to your Apple, Google, or Outlook calendars.',
+                href: '/create',
+                cta: 'Try it out →',
+            },
+            {
+                emoji: '💌',
+                title: 'Secret Email Delivery',
+                desc: 'You can now securely deliver a capsule straight to someone\'s email inbox. They will receive the link without knowing who sent it.',
+                href: '/create',
+                cta: 'Send one →',
+            },
+            {
+                emoji: '✏️',
+                title: 'Edit your capsule',
+                desc: 'Change the message, recipient, unlock date or privacy — only you can edit your own capsule.',
+                href: '/history',
+                cta: 'My capsules →',
+            },
+            {
+                emoji: '📊',
+                title: 'Live stats',
+                desc: 'Homepage now shows real-time capsule counts and unique songs.',
+                href: '/#stats',
+                cta: 'See stats →',
+            },
+        ],
+    },
     {
         version: '1.2.0',
         date: '2026-02-22',
