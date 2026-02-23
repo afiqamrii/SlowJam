@@ -2,39 +2,57 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Music2, Lock } from 'lucide-react';
+import { Music2, Lock, LogIn } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import FavoriteButton from '../components/FavoriteButton';
+import { useAuth } from '@/app/hooks/useAuth';
 
 export default function SavedPage() {
+    const { user, loading: authLoading, signInWithGoogle } = useAuth();
     const [capsules, setCapsules] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchSaved = async () => {
+            if (!user) {
+                setCapsules([]);
+                setLoading(false);
+                return;
+            }
+
             setLoading(true);
             try {
-                const savedIds = localStorage.getItem('favorited_capsules');
-                if (!savedIds) {
-                    setCapsules([]);
-                    return;
-                }
+                // 1. Get the session token
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) throw new Error("No session");
 
-                const idsArray = JSON.parse(savedIds);
+                // 2. Fetch favorited IDs from API
+                const res = await fetch('/api/user/favorites', {
+                    headers: {
+                        Authorization: `Bearer ${session.access_token}`
+                    }
+                });
+
+                if (!res.ok) throw new Error("Failed to fetch favorites list");
+
+                const data = await res.json();
+                const idsArray = data.favorites;
+
                 if (!Array.isArray(idsArray) || idsArray.length === 0) {
                     setCapsules([]);
                     return;
                 }
 
-                const { data, error } = await supabase
+                // 3. Fetch matched capsules from Supabase
+                const { data: capsuleData, error } = await supabase
                     .from('capsules')
                     .select('*')
                     .in('id', idsArray)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
-                if (data) setCapsules(data);
+                if (capsuleData) setCapsules(capsuleData);
             } catch (error) {
                 console.error('Error fetching saved capsules:', error);
             } finally {
@@ -42,15 +60,57 @@ export default function SavedPage() {
             }
         };
 
-        fetchSaved();
-
-        // Listen for storage changes from other tabs to keep list synced
-        const handleStorage = () => {
+        if (!authLoading) {
             fetchSaved();
-        };
-        window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
-    }, []);
+        }
+    }, [user, authLoading]);
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen pt-20 pb-12 px-5 max-w-4xl mx-auto font-(--font-gloria) overflow-x-hidden">
+                <div className="mb-8">
+                    <h1 className="text-4xl font-bold text-foreground mb-2">Saved</h1>
+                </div>
+                <div className="flex justify-center py-20">
+                    <div className="w-8 h-8 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+                </div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className="min-h-screen pt-20 pb-12 px-5 max-w-4xl mx-auto font-(--font-gloria) overflow-x-hidden">
+                <motion.div
+                    initial={{ opacity: 0, y: -12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                >
+                    <h1 className="text-4xl font-bold text-foreground mb-2">Saved</h1>
+                    <p className="text-gray-400 font-sans text-sm">
+                        Capsules you've favorited for inspiration.
+                    </p>
+                </motion.div>
+
+                <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-4 border border-dashed border-gray-200 bg-gray-50/50 rounded-3xl">
+                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center">
+                        <Lock size={28} className="text-gray-300" />
+                    </div>
+                    <p className="font-sans text-lg font-bold text-gray-700">Sign in to view saved</p>
+                    <p className="font-sans text-sm max-w-sm text-center text-gray-500 mb-2">
+                        You need to be signed in to save capsules and view your collection.
+                    </p>
+                    <button
+                        onClick={() => signInWithGoogle('/saved')}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 text-accent font-sans text-sm font-semibold hover:border-accent hover:shadow-sm rounded-full transition-all"
+                    >
+                        <LogIn size={16} />
+                        Sign In with Google
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen pt-20 pb-12 px-5 max-w-4xl mx-auto font-(--font-gloria) overflow-x-hidden">
@@ -80,7 +140,7 @@ export default function SavedPage() {
                     <p className="font-sans text-xs max-w-xs text-center">
                         Browse the public capsules and click the heart icon on any you like to save them here.
                     </p>
-                    <Link href="/browse" className="mt-4 px-6 py-2 bg-white border border-gray-200 text-[var(--accent)] font-sans text-sm font-medium hover:border-[var(--accent)] hover:shadow-sm rounded-full transition-all">
+                    <Link href="/browse" className="mt-4 px-6 py-2 bg-white border border-gray-200 text-accent font-sans text-sm font-medium hover:border-accent hover:shadow-sm rounded-full transition-all">
                         Browse Capsules
                     </Link>
                 </div>
@@ -121,9 +181,9 @@ export default function SavedPage() {
 
                                                 {/* Message preview */}
                                                 {capsule.is_private ? (
-                                                    <div className="flex items-center gap-2 py-1.5 px-3 bg-[var(--accent)]/6 rounded-xl border border-dashed border-[var(--accent)]/25">
+                                                    <div className="flex items-center gap-2 py-1.5 px-3 bg-(--accent)/6 rounded-xl border border-dashed border-(--accent)/25">
                                                         <span className="text-base">🔒</span>
-                                                        <p className="text-sm text-[var(--accent)] italic">
+                                                        <p className="text-sm text-accent italic">
                                                             psst... it's a secret. belongs to someone 👀
                                                         </p>
                                                     </div>
@@ -155,10 +215,10 @@ export default function SavedPage() {
                                                     </div>
                                                 )}
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-[var(--foreground)] truncate leading-tight">
+                                                    <p className="text-sm font-bold text-foreground truncate leading-tight font-sans">
                                                         {capsule.track_name}
                                                     </p>
-                                                    <p className="text-xs text-gray-400 truncate">
+                                                    <p className="text-xs text-gray-400 truncate font-sans">
                                                         {capsule.artist_name}
                                                     </p>
                                                 </div>
