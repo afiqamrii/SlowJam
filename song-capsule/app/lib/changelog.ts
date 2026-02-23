@@ -8,7 +8,7 @@
 // After bumping, add a new entry at the TOP of RELEASES.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = '1.3.2';
+export const APP_VERSION = '1.3.3';
 
 export interface Release {
     version: string;
@@ -24,7 +24,7 @@ export interface Release {
 
 export const RELEASES: Release[] = [
     {
-        version: '1.3.2',
+        version: '1.3.3',
         date: new Date().toISOString().split('T')[0],
         highlights: [
             {

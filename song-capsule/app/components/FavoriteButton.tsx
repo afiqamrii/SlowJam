@@ -1,4 +1,7 @@
+'use client';
+
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Heart } from 'lucide-react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -32,6 +35,7 @@ export default function FavoriteButton({ capsuleId, initialCount, variant = 'def
     const [count, setCount] = useState(initialCount);
     const [isUpdating, setIsUpdating] = useState(false);
     const [showAuthDialog, setShowAuthDialog] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     // Only fetch favorites if user is signed in
     const { data: favoritesData } = useSWR(
@@ -48,6 +52,10 @@ export default function FavoriteButton({ capsuleId, initialCount, variant = 'def
     useEffect(() => {
         setCount(initialCount);
     }, [initialCount]);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleToggle = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -128,53 +136,56 @@ export default function FavoriteButton({ capsuleId, initialCount, variant = 'def
                 </span>
             </button>
 
-            <AnimatePresence>
-                {showAuthDialog && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAuthDialog(false); }}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        >
-                            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-                                <Heart size={28} className="text-red-400 fill-current" />
-                            </div>
-                            <h3 className="text-xl font-bold font-sans text-gray-900 mb-2">Save this Capsule?</h3>
-                            <p className="text-gray-500 font-sans text-sm mb-6">
-                                Sign in to save this capsule to your collection and show the creator some love.
-                            </p>
-                            <div className="flex w-full gap-3">
-                                <button
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAuthDialog(false); }}
-                                    className="flex-1 py-2.5 px-4 rounded-xl font-sans font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors"
-                                >
-                                    Not now
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setShowAuthDialog(false);
-                                        signInWithGoogle(pathname);
-                                    }}
-                                    className="flex-1 py-2.5 px-4 rounded-xl font-sans font-semibold text-white bg-accent hover:bg-accent-secondary transition-colors shadow-sm"
-                                >
-                                    Sign In
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {mounted && createPortal(
+                <AnimatePresence>
+                    {showAuthDialog && (
+                        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAuthDialog(false); }}
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                            >
+                                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+                                    <Heart size={28} className="text-red-400 fill-current" />
+                                </div>
+                                <h3 className="text-xl font-bold font-sans text-gray-900 mb-2">Save this Capsule?</h3>
+                                <p className="text-gray-500 font-sans text-sm mb-6">
+                                    Sign in to save this capsule to your collection and show the creator some love.
+                                </p>
+                                <div className="flex w-full gap-3">
+                                    <button
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAuthDialog(false); }}
+                                        className="flex-1 py-2.5 px-4 rounded-xl font-sans font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors"
+                                    >
+                                        Not now
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setShowAuthDialog(false);
+                                            signInWithGoogle(pathname);
+                                        }}
+                                        className="flex-1 py-2.5 px-4 rounded-xl font-sans font-semibold text-white bg-accent hover:bg-accent-secondary transition-colors shadow-sm"
+                                    >
+                                        Sign In
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </>
     );
 }
