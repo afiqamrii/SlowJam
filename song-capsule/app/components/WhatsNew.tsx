@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, ArrowRight } from 'lucide-react';
 import { APP_VERSION, RELEASES } from '@/app/lib/changelog';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const STORAGE_KEY = 'slowjam_seen_version';
 
@@ -124,30 +125,46 @@ export default function WhatsNew() {
 
                         {/* Highlights */}
                         <div className="px-4 py-3 space-y-2.5">
-                            {latest.highlights.map((h, i) => (
-                                <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, x: -8 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: i * 0.06, duration: 0.22 }}
-                                    className={`flex items-start gap-3 rounded-xl px-2 py-2 transition-colors group ${h.href ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
-                                    onClick={() => h.href && handleNavigate(h.href)}
-                                >
-                                    <span className="text-lg leading-none mt-0.5 shrink-0">{h.emoji}</span>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-sans font-bold text-gray-700">{h.title}</p>
-                                        <p className="text-xs font-sans text-gray-400 leading-snug mt-0.5">{h.desc}</p>
-                                    </div>
-                                    {h.href && (
-                                        <motion.span
-                                            className="shrink-0 flex items-center gap-0.5 text-[10px] font-sans font-bold text-[#d97757] opacity-0 group-hover:opacity-100 transition-opacity mt-1"
-                                        >
-                                            {h.cta ?? 'See it'}
-                                            <ArrowRight size={10} />
-                                        </motion.span>
-                                    )}
-                                </motion.div>
-                            ))}
+                            {latest.highlights.map((h, i) => {
+                                const Content = (
+                                    <>
+                                        <span className="text-lg leading-none mt-0.5 shrink-0">{h.emoji}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-sans font-bold text-gray-700">{h.title}</p>
+                                            <p className="text-xs font-sans text-gray-400 leading-snug mt-0.5">{h.desc}</p>
+                                        </div>
+                                        {h.href && (
+                                            <motion.span
+                                                className="shrink-0 flex items-center gap-0.5 text-[10px] font-sans font-bold text-[#d97757] opacity-0 group-hover:opacity-100 transition-opacity mt-1"
+                                            >
+                                                {h.cta ?? 'See it'}
+                                                <ArrowRight size={10} />
+                                            </motion.span>
+                                        )}
+                                    </>
+                                );
+
+                                const className = `flex items-start gap-3 rounded-xl px-2 py-2 transition-colors group ${h.href ? 'hover:bg-gray-50 cursor-pointer' : ''}`;
+
+                                return (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, x: -8 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: i * 0.06, duration: 0.22 }}
+                                    >
+                                        {h.href ? (
+                                            <Link href={h.href} onClick={handleClose} className={className} style={{ display: 'flex', width: '100%' }}>
+                                                {Content}
+                                            </Link>
+                                        ) : (
+                                            <div className={className}>
+                                                {Content}
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                );
+                            })}
                         </div>
 
                         {/* Footer */}

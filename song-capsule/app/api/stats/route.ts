@@ -13,7 +13,7 @@ export async function GET() {
         const [totalResult, privateResult, songsResult] = await Promise.all([
             supabase.from('capsules').select('*', { count: 'exact', head: true }),
             supabase.from('capsules').select('*', { count: 'exact', head: true }).eq('is_private', true),
-            supabase.from('capsules').select('track_name, polaroid_downloads'),
+            supabase.from('capsules').select('track_name, polaroid_downloads, email_sent'),
         ]);
 
         const total = totalResult.count ?? 0;
@@ -25,8 +25,10 @@ export async function GET() {
         const uniqueSongs = new Set(allSongs.map((r: { track_name: string }) => r.track_name)).size;
 
         let polaroidDownloads = 0;
-        allSongs.forEach((r: { polaroid_downloads?: number }) => {
+        let secretEmailsSent = 0;
+        allSongs.forEach((r: { polaroid_downloads?: number, email_sent?: boolean }) => {
             polaroidDownloads += (r.polaroid_downloads || 0);
+            if (r.email_sent) secretEmailsSent++;
         });
 
         return NextResponse.json({
@@ -35,6 +37,7 @@ export async function GET() {
             private: privateCapsules,
             uniqueSongs,
             polaroidDownloads,
+            secretEmailsSent,
         });
     } catch (err) {
         console.error('[/api/stats] error:', err);

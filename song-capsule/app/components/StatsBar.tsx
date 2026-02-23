@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Globe, Lock, Music, Camera } from 'lucide-react';
+import { Package, Globe, Lock, Music, Camera, Mail } from 'lucide-react';
 
 interface Stats {
     total: number;
@@ -10,6 +10,7 @@ interface Stats {
     private: number;
     uniqueSongs: number;
     polaroidDownloads: number;
+    secretEmailsSent: number;
 }
 
 function useCountUp(target: number, duration = 1400) {
@@ -44,6 +45,7 @@ const statDefs = [
     { key: 'private' as const, label: 'Kept Private', icon: Lock, color: '#a78bfa', bg: 'rgba(167,139,250,0.10)' },
     { key: 'uniqueSongs' as const, label: 'Songs Used', icon: Music, color: '#8c9b78', bg: 'rgba(140,155,120,0.10)' },
     { key: 'polaroidDownloads' as const, label: 'Polaroids Saved', icon: Camera, color: '#fbbf24', bg: 'rgba(251,191,36,0.10)' },
+    { key: 'secretEmailsSent' as const, label: 'Secretly Emailed', icon: Mail, color: '#f472b6', bg: 'rgba(244,114,182,0.10)' },
 ];
 
 function StatCard({ def, value, index }: { def: typeof statDefs[0]; value: number; index: number }) {
@@ -95,7 +97,7 @@ export default function StatsBar() {
             .catch(() => { /* silently fail */ });
     }, []);
 
-    const values: Stats = stats ?? { total: 0, public: 0, private: 0, uniqueSongs: 0, polaroidDownloads: 0 };
+    const values: Stats = stats ?? { total: 0, public: 0, private: 0, uniqueSongs: 0, polaroidDownloads: 0, secretEmailsSent: 0 };
 
     return (
         <section className="w-full max-w-5xl px-6 py-16 mx-auto">
@@ -117,7 +119,7 @@ export default function StatsBar() {
                 </p>
             </motion.div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
                 {statDefs.map((def, i) => (
                     <StatCard key={def.key} def={def} value={values[def.key]} index={i} />
                 ))}

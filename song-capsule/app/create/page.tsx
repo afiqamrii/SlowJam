@@ -252,8 +252,8 @@ export default function CreateCapsule() {
                         ...(sendNow ? {} : { unlockDate: unlockAt })
                     })
                 }).then(async (res) => {
-                    if (res.ok && sendNow) {
-                        // We only mark email_sent true for sendNow capsules (or we can just mark it true for all since we sent it)
+                    if (res.ok) {
+                        // Mark email_sent true for all successful email dispatches (both instant and scheduled calendar invites)
                         await supabase.from('capsules').update({ email_sent: true }).eq('id', data.id);
                     }
                 }).catch(err => console.error("Error triggering instant email:", err));

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, ArrowRight } from 'lucide-react';
 import { APP_VERSION, RELEASES } from '@/app/lib/changelog';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const STORAGE_KEY = 'slowjam_seen_version';
 
@@ -125,28 +126,40 @@ export default function WhatsNewBanner() {
 
                             {/* Highlights list */}
                             <div className="px-5 py-4 space-y-2">
-                                {latest.highlights.map((h, i) => (
-                                    <motion.button
-                                        key={i}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.07, duration: 0.22 }}
-                                        onClick={() => handleNavigate(h.href)}
-                                        className="w-full flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-gray-50 active:bg-gray-100 group"
-                                    >
-                                        <span className="text-xl shrink-0">{h.emoji}</span>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-sans font-bold text-gray-700">{h.title}</p>
-                                            <p className="text-xs font-sans text-gray-400 leading-snug mt-0.5">{h.desc}</p>
+                                {latest.highlights.map((h, i) => {
+                                    const Content = (
+                                        <>
+                                            <span className="text-xl shrink-0">{h.emoji}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-sans font-bold text-gray-700">{h.title}</p>
+                                                <p className="text-xs font-sans text-gray-400 leading-snug mt-0.5">{h.desc}</p>
+                                            </div>
+                                            {h.href && (
+                                                <span className="shrink-0 flex items-center gap-0.5 text-[11px] font-sans font-bold text-[#d97757]">
+                                                    {h.cta ?? 'See it'}
+                                                    <ArrowRight size={11} />
+                                                </span>
+                                            )}
+                                        </>
+                                    );
+
+                                    const className = "w-full flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-gray-50 active:bg-gray-100 group";
+
+                                    return h.href ? (
+                                        <Link
+                                            key={i}
+                                            href={h.href}
+                                            onClick={closeModal}
+                                            className={className}
+                                        >
+                                            {Content}
+                                        </Link>
+                                    ) : (
+                                        <div key={i} className={className}>
+                                            {Content}
                                         </div>
-                                        {h.href && (
-                                            <span className="shrink-0 flex items-center gap-0.5 text-[11px] font-sans font-bold text-[#d97757]">
-                                                {h.cta ?? 'See it'}
-                                                <ArrowRight size={11} />
-                                            </span>
-                                        )}
-                                    </motion.button>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             {/* Footer */}
