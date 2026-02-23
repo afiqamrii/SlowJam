@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import ImageCropper from '@/app/components/polaroid/ImageCropper';
 import PolaroidCard from '@/app/components/polaroid/PolaroidCard';
 import ExportButton from '@/app/components/polaroid/ExportButton';
+import FavoriteButton from '@/app/components/FavoriteButton';
 import { useImageProcessing } from '@/app/hooks/useImageProcessing';
 import { useCanvasExport } from '@/app/hooks/useCanvasExport';
 import type { ExportFormat } from '@/app/lib/canvasRenderer';
@@ -321,6 +322,15 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                     </div>
                                 )}
 
+                                {/* Top-Right Favorite Button */}
+                                <div className="absolute top-4 right-4 z-20">
+                                    <FavoriteButton
+                                        capsuleId={capsule.id}
+                                        initialCount={capsule.favorites_count || 0}
+                                        variant="glass"
+                                    />
+                                </div>
+
                                 {/* Gradient overlay — stronger at bottom for text readability */}
                                 <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/50 to-black/10" />
 
@@ -335,7 +345,7 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                     {/* Artist name — Gloria font, left */}
                                     <p className="text-white/75 text-base md:text-lg mt-1 pr-20 text-left font-(--font-gloria)">{capsule.artist_name}</p>
 
-                                    {/* ── Platform links row ── */}
+                                    {/* ── Platform links & Action row ── */}
                                     <div className="flex items-center gap-3 mt-4">
                                         <p className="text-white/40 text-[10px] uppercase tracking-widest font-sans mr-1">Open in</p>
 

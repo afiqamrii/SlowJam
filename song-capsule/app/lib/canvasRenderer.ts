@@ -68,30 +68,23 @@ function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
     const lines: string[] = [];
-    const paragraphs = text.split('\n');
-    // Collapse consecutive empty lines into a single one
-    const collapsed: string[] = [];
-    let lastWasEmpty = false;
-    for (const p of paragraphs) {
-        const isEmpty = !p.trim();
-        if (isEmpty && lastWasEmpty) continue; // skip duplicate blanks
-        collapsed.push(p);
-        lastWasEmpty = isEmpty;
-    }
-    // Remove leading/trailing blank lines
-    while (collapsed.length && !collapsed[0].trim()) collapsed.shift();
-    while (collapsed.length && !collapsed[collapsed.length - 1].trim()) collapsed.pop();
+    // Collapse all newlines and multiple spaces into a single space to prevent overflow
+    const cleanText = text.replace(/\s+/g, ' ').trim();
 
-    for (const para of collapsed) {
-        if (!para.trim()) { lines.push(''); continue; }
-        let cur = '';
-        for (const word of para.split(' ')) {
-            const test = cur ? `${cur} ${word}` : word;
-            if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = word; }
-            else { cur = test; }
+    if (!cleanText) return [];
+
+    let cur = '';
+    for (const word of cleanText.split(' ')) {
+        const test = cur ? `${cur} ${word}` : word;
+        if (ctx.measureText(test).width > maxW && cur) {
+            lines.push(cur);
+            cur = word;
+        } else {
+            cur = test;
         }
-        if (cur) lines.push(cur);
     }
+    if (cur) lines.push(cur);
+
     return lines;
 }
 

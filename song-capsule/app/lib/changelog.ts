@@ -42,6 +42,13 @@ export const RELEASES: Release[] = [
                 cta: 'Send one →',
             },
             {
+                emoji: '💖',
+                title: 'Save Your Favorite Capsules',
+                desc: 'You can now "heart" your favorite capsules to save them as inspiration for later! Find them all neatly organized in your new "Saved" tab, and easily sort the Browse page by Highest Saves.',
+                href: '/history',
+                cta: 'My capsules →',
+            },
+            {
                 emoji: '✏️',
                 title: 'Edit your capsule',
                 desc: 'Change the message, recipient, unlock date or privacy — only you can edit your own capsule.',
