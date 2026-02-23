@@ -247,6 +247,7 @@ export default function CreateCapsule() {
                         receiverEmail: receiverEmail.trim(),
                         receiverName,
                         capsuleUrl,
+                        userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                         // Only pass unlockDate if it is a scheduled capsule, to trigger the calendar email template
                         ...(sendNow ? {} : { unlockDate: unlockAt })
                     })

@@ -7,7 +7,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { receiverEmail, receiverName, capsuleUrl, unlockDate } = body;
+        const { receiverEmail, receiverName, capsuleUrl, unlockDate, userTimezone } = body;
 
         if (!receiverEmail || !capsuleUrl) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -25,8 +25,20 @@ export async function POST(request: Request) {
 
         if (unlockDate) {
             const dateObj = new Date(unlockDate);
-            const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            // Format the date strings using the sender's local timezone if available
+            const formatOptions: Intl.DateTimeFormatOptions = {
+                timeZone: userTimezone || 'UTC'
+            };
+
+            const formattedDate = dateObj.toLocaleDateString('en-US', {
+                ...formatOptions,
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+            const formattedTime = dateObj.toLocaleTimeString('en-US', {
+                ...formatOptions,
+                hour: '2-digit', minute: '2-digit'
+            });
 
             // Format for Google Calendar (YYYYMMDDTHHMMSSZ)
             // Convert local time to UTC for the calendar link
