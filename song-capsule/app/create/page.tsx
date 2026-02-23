@@ -235,8 +235,8 @@ export default function CreateCapsule() {
             setCapsuleId(data.id);
             setShareToken(newToken);
 
-            // If sending now, trigger instant email delivery
-            if (sendNow && sendAnonymously && receiverEmail.trim()) {
+            // If an email was provided, trigger an instant email delivery regardless of whether it's sendNow or scheduled
+            if (sendAnonymously && receiverEmail.trim()) {
                 const capsuleUrl = `${window.location.origin}/view/${data.id}${isPrivate && newToken ? `?key=${newToken}` : ''}`;
 
                 // Do not await to avoid blocking the UI success page transition too much, though waiting is fine for reliability.
@@ -246,10 +246,13 @@ export default function CreateCapsule() {
                     body: JSON.stringify({
                         receiverEmail: receiverEmail.trim(),
                         receiverName,
-                        capsuleUrl
+                        capsuleUrl,
+                        // Only pass unlockDate if it is a scheduled capsule, to trigger the calendar email template
+                        ...(sendNow ? {} : { unlockDate: unlockAt })
                     })
                 }).then(async (res) => {
-                    if (res.ok) {
+                    if (res.ok && sendNow) {
+                        // We only mark email_sent true for sendNow capsules (or we can just mark it true for all since we sent it)
                         await supabase.from('capsules').update({ email_sent: true }).eq('id', data.id);
                     }
                 }).catch(err => console.error("Error triggering instant email:", err));
@@ -785,6 +788,67 @@ export default function CreateCapsule() {
                                     <Copy size={20} />
                                 </button>
                             </div>
+
+                            {/* Show Add to Calendar prompt if the user scheduled this capsule */}
+                            {!sendNow && unlockDate && (
+                                <div className="w-full bg-[var(--accent)]/5 border border-[var(--accent)]/20 p-5 rounded-2xl mt-2 text-left space-y-3">
+                                    <div className="flex items-start gap-3">
+                                        <div className="bg-white p-2 rounded-lg shadow-sm text-[var(--accent)]">
+                                            <Calendar size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-[var(--foreground)]">Don't forget to send it!</p>
+                                            <p className="text-sm text-gray-600 mt-1">We emailed <b>{receiverName}</b> a locked preview, but you can also add a reminder to your own calendar to track when it opens.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2 w-full pt-1">
+                                        {(() => {
+                                            const dateObj = new Date(unlockDate);
+                                            const startDateStr = dateObj.toISOString().replace(/-|:|\.\d\d\d/g, '');
+                                            const endDateObj = new Date(dateObj.getTime() + 60 * 60 * 1000);
+                                            const endDateStr = endDateObj.toISOString().replace(/-|:|\.\d\d\d/g, '');
+                                            const eventTitle = encodeURIComponent(`Unlock Song Capsule for ${receiverName}`);
+                                            const capsuleUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/view/${capsuleId}${isPrivate && shareToken ? `?key=${shareToken}` : ''}`;
+                                            const eventDetails = encodeURIComponent(`The time capsule is ready to open!\n\nLink: ${capsuleUrl}`);
+
+                                            // Ensure local time correctly aligns with google calendar via Z-stripped parameters or explicit timezone handling
+                                            // The simplest reliable way for Google Calendar URLs cross-timezone is omitting the Z but using the local YYYYMMDDTHHMMSS format.
+                                            // Adjusting for Google calendar format expectations for local time:
+                                            const localStartStr =
+                                                dateObj.getFullYear().toString() +
+                                                (dateObj.getMonth() + 1).toString().padStart(2, '0') +
+                                                dateObj.getDate().toString().padStart(2, '0') + 'T' +
+                                                dateObj.getHours().toString().padStart(2, '0') +
+                                                dateObj.getMinutes().toString().padStart(2, '0') + '00';
+
+                                            const localEndStr =
+                                                endDateObj.getFullYear().toString() +
+                                                (endDateObj.getMonth() + 1).toString().padStart(2, '0') +
+                                                endDateObj.getDate().toString().padStart(2, '0') + 'T' +
+                                                endDateObj.getHours().toString().padStart(2, '0') +
+                                                endDateObj.getMinutes().toString().padStart(2, '0') + '00';
+
+                                            const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=${localStartStr}/${localEndStr}&details=${eventDetails}`;
+
+                                            // Provide absolute URL relative to current domain
+                                            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                                            const icsUrl = `${baseUrl}/api/calendar?title=${eventTitle}&start=${startDateStr}&end=${endDateStr}&details=${eventDetails}`;
+
+                                            return (
+                                                <>
+                                                    <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-colors">
+                                                        Google Calendar
+                                                    </a>
+                                                    <a href={icsUrl} download="capsule-reminder.ics" className="flex-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-colors">
+                                                        Apple / Phone Calendar
+                                                    </a>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="flex gap-4 w-full mt-4">
                                 <button

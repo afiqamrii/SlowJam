@@ -7,16 +7,83 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { receiverEmail, receiverName, capsuleUrl } = body;
+        const { receiverEmail, receiverName, capsuleUrl, unlockDate } = body;
 
         if (!receiverEmail || !capsuleUrl) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
+        let subject = 'Someone sent you a Song Capsule 🎵';
+        let title = 'You have a song waiting.';
+        let messageHtml = `Someone sent you a song anonymously and sealed it in a digital time capsule with a message just for you.`;
+        let buttonHtml = `
+            <a href="${capsuleUrl}" 
+            style="display:inline-block; padding:12px 22px; font-size:14px; font-weight:500; color:#fff; background:#111; text-decoration:none; border-radius:6px;">
+            Play Song
+            </a>
+        `;
+
+        if (unlockDate) {
+            const dateObj = new Date(unlockDate);
+            const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            // Format for Google Calendar (YYYYMMDDTHHMMSSZ)
+            // Convert local time to UTC for the calendar link
+            const utcUnlockDate = new Date(dateObj.getTime() + dateObj.getTimezoneOffset() * 60000);
+
+            // Format dates
+            const startDateStr = dateObj.toISOString().replace(/-|:|\.\d\d\d/g, '');
+            const endDateObj = new Date(dateObj.getTime() + 60 * 60 * 1000); // 1 hour event
+            const endDateStr = endDateObj.toISOString().replace(/-|:|\.\d\d\d/g, '');
+
+            const eventTitle = `Unlock Song Capsule from ${receiverName || 'Someone'}`;
+            const eventDetails = `Your time capsule is ready to open!\n\nListen here: ${capsuleUrl}`;
+
+            // Google Calendar Link
+            const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventTitle)}&dates=${startDateStr}/${endDateStr}&details=${encodeURIComponent(eventDetails)}`;
+
+            // Create ICS File Link via API
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://slowjam.xyz');
+            const icsUrl = `${baseUrl}/api/calendar?title=${encodeURIComponent(eventTitle)}&start=${startDateStr}&end=${endDateStr}&details=${encodeURIComponent(eventDetails)}`;
+
+            subject = 'A Time Capsule was created for you! ⏳';
+            title = 'A capsule is waiting for you.';
+            messageHtml = `
+                Someone created a digital time capsule for you, but it's locked! 
+                <br><br>
+                It will officially unlock on <strong>${formattedDate} at ${formattedTime}</strong>.
+            `;
+            buttonHtml = `
+                <div style="margin-bottom: 24px;">
+                    <a href="${capsuleUrl}" 
+                    style="display:inline-block; padding:12px 22px; font-size:14px; font-weight:500; color:#fff; background:#111; text-decoration:none; border-radius:6px;">
+                    Link to your Capsule
+                    </a>
+                </div>
+                
+                <div style="margin-bottom: 16px; font-size: 14px; color: #555;"><strong>Add a reminder to your phone calendar:</strong></div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <a href="${googleCalendarUrl}" target="_blank"
+                    style="display:inline-block; padding:10px 16px; font-size:13px; font-weight:500; color:#444; background:#f4f4f5; text-decoration:none; border-radius:6px; border: 1px solid #e4e4e7;">
+                    📅 Google Calendar
+                    </a>
+                    <a href="${icsUrl}" download="capsule-reminder.ics"
+                    style="display:inline-block; padding:10px 16px; font-size:13px; font-weight:500; color:#444; background:#f4f4f5; text-decoration:none; border-radius:6px; border: 1px solid #e4e4e7;">
+                    📅 Apple / Phone Calendar
+                    </a>
+                </div>
+                <div style="margin-top: 24px; font-size: 13px; color: #777;">
+                    If the button above does not work, here is your link:<br>
+                    <a href="${capsuleUrl}" style="color: #666; word-break: break-all;">${capsuleUrl}</a>
+                </div>
+            `;
+        }
+
         const { data, error } = await resend.emails.send({
             from: 'SlowJam <delivery@slowjam.xyz>',
             to: [receiverEmail],
-            subject: 'Someone sent you a Song Capsule 🎵',
+            subject: subject,
             html: `
                 <!DOCTYPE html>
                 <html>
@@ -44,7 +111,7 @@ export async function POST(request: Request) {
                 <!-- Title -->
                 <tr>
                 <td style="font-size:22px; font-weight:600; padding-bottom:16px;">
-                You have a song waiting.
+                ${title}
                 </td>
                 </tr>
 
@@ -58,17 +125,14 @@ export async function POST(request: Request) {
                 <!-- Message -->
                 <tr>
                 <td style="font-size:15px; color:#333; line-height:1.6; padding-bottom:32px;">
-                Someone sent you a song anonymously and sealed it in a digital time capsule with a message just for you.
+                ${messageHtml}
                 </td>
                 </tr>
 
-                <!-- Button -->
+                <!-- Button/Actions -->
                 <tr>
                 <td align="left" style="padding-bottom:40px;">
-                <a href="${capsuleUrl}" 
-                style="display:inline-block; padding:12px 22px; font-size:14px; font-weight:500; color:#fff; background:#111; text-decoration:none; border-radius:6px;">
-                Play Song
-                </a>
+                ${buttonHtml}
                 </td>
                 </tr>
 
