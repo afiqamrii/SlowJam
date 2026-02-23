@@ -10,18 +10,34 @@ export const revalidate = 60; // revalidate every 60 seconds
 
 export async function GET() {
     try {
-        const [totalResult, privateResult, songsResult] = await Promise.all([
+        const [totalResult, privateResult] = await Promise.all([
             supabase.from('capsules').select('*', { count: 'exact', head: true }),
             supabase.from('capsules').select('*', { count: 'exact', head: true }).eq('is_private', true),
-            supabase.from('capsules').select('track_name, polaroid_downloads, email_sent'),
         ]);
 
         const total = totalResult.count ?? 0;
         const privateCapsules = privateResult.count ?? 0;
         const publicCapsules = total - privateCapsules;
 
+        // Fetch all songs with pagination to overcome the 1000 row limit
+        let allSongs: any[] = [];
+        let from = 0;
+        const step = 1000;
+
+        while (true) {
+            const { data, error } = await supabase
+                .from('capsules')
+                .select('track_name, polaroid_downloads, email_sent')
+                .range(from, from + step - 1);
+
+            if (error || !data || data.length === 0) break;
+            allSongs = allSongs.concat(data);
+
+            if (data.length < step) break; // Reached the end
+            from += step;
+        }
+
         // Count distinct track names and sum polaroid downloads
-        const allSongs = songsResult.data ?? [];
         const uniqueSongs = new Set(allSongs.map((r: { track_name: string }) => r.track_name)).size;
 
         let polaroidDownloads = 0;

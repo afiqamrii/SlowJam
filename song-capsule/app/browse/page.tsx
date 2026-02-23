@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Music2, Lock, Globe, Music } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import useSWRInfinite from 'swr/infinite';
 
 interface BrowseStats {
     total: number;
@@ -13,72 +14,50 @@ interface BrowseStats {
 }
 
 export default function BrowsePage() {
-    const [capsules, setCapsules] = useState<any[]>([]);
     const [query, setQuery] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [page, setPage] = useState(0);
-    const [hasMore, setHasMore] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const scrollRestored = useRef(false);
     const [browseStats, setBrowseStats] = useState<BrowseStats | null>(null);
-
-    const SCROLL_KEY = 'browse_scroll_pos';
 
     const PAGE_SIZE = 12;
 
-    const fetchCapsules = async (pageIndex: number, isNewSearch = false) => {
-        if (isNewSearch) {
-            setLoading(true);
-            setCapsules([]);
-        } else {
-            setLoadingMore(true);
+    const fetcher = async ({ pageIndex, searchQuery }: { pageIndex: number, searchQuery: string }) => {
+        let q = supabase
+            .from('capsules')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (searchQuery.trim()) {
+            q = q.ilike('receiver_name', `%${searchQuery.trim()}%`);
         }
 
-        try {
-            let q = supabase
-                .from('capsules')
-                .select('*')
-                .order('created_at', { ascending: false });
+        const from = pageIndex * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
 
-            if (query.trim()) {
-                q = q.ilike('receiver_name', `%${query.trim()}%`);
-            }
-
-            const from = pageIndex * PAGE_SIZE;
-            const to = from + PAGE_SIZE - 1;
-
-            const { data, error } = await q.range(from, to);
-
-            if (error) throw error;
-
-            if (data) {
-                if (isNewSearch) {
-                    setCapsules(data);
-                } else {
-                    setCapsules(prev => [...prev, ...data]);
-                }
-
-                setHasMore(data.length === PAGE_SIZE);
-            }
-        } catch (error) {
-            console.error('Error fetching capsules:', error);
-        } finally {
-            setLoading(false);
-            setLoadingMore(false);
-        }
+        const { data, error } = await q.range(from, to);
+        if (error) throw error;
+        return data;
     };
 
-    // Restore scroll position after data loads
-    useEffect(() => {
-        if (!loading && !scrollRestored.current) {
-            const saved = sessionStorage.getItem(SCROLL_KEY);
-            if (saved) {
-                window.scrollTo({ top: parseInt(saved), behavior: 'instant' as ScrollBehavior });
-                sessionStorage.removeItem(SCROLL_KEY);
-            }
-            scrollRestored.current = true;
-        }
-    }, [loading]);
+    const getKey = (pageIndex: number, previousPageData: any) => {
+        // Reached the end
+        if (previousPageData && !previousPageData.length) return null;
+
+        // Pass both pageIndex and query to fetcher
+        return { pageIndex, searchQuery: query };
+    };
+
+    const { data, size, setSize, isValidating } = useSWRInfinite(getKey, fetcher, {
+        revalidateFirstPage: false,
+        persistSize: true, // Retains number of pages loaded when navigating back!
+    });
+
+    const capsules: any[] = data ? ([] as any[]).concat(...data) : [];
+    const isLoadingInitialData = !data && !isValidating;
+    const isLoadingMore =
+        isLoadingInitialData ||
+        (size > 0 && data && typeof data[size - 1] === "undefined");
+    const isEmpty = data?.[0]?.length === 0;
+    const isReachingEnd =
+        isEmpty || (data && data[data.length - 1]?.length < PAGE_SIZE);
 
     // Fetch stats once
     useEffect(() => {
@@ -88,17 +67,8 @@ export default function BrowsePage() {
             .catch(() => { /* fail silently */ });
     }, []);
 
-    // Initial fetch and search changes
-    useEffect(() => {
-        setPage(0);
-        const delay = setTimeout(() => fetchCapsules(0, true), 400);
-        return () => clearTimeout(delay);
-    }, [query]);
-
     const handleLoadMore = () => {
-        const nextPage = page + 1;
-        setPage(nextPage);
-        fetchCapsules(nextPage, false);
+        setSize(size + 1);
     };
 
     return (
@@ -165,7 +135,7 @@ export default function BrowsePage() {
             </div>
 
             {/* Capsule grid */}
-            {loading ? (
+            {!data && isValidating ? (
                 <div className="grid sm:grid-cols-2 gap-4">
                     {[...Array(4)].map((_, i) => (
                         <div key={i} className="h-52 bg-gray-100 rounded-2xl animate-pulse" />
@@ -194,7 +164,7 @@ export default function BrowsePage() {
                                         <Link
                                             href={`/view/${capsule.id}`}
                                             className="block h-full"
-                                            onClick={() => sessionStorage.setItem(SCROLL_KEY, String(window.scrollY))}
+                                            scroll={false} // Prevent automatic scroll to top
                                         >
                                             <div className="w-full h-full bg-white border border-gray-100 hover:border-(--accent)/30 hover:shadow-lg shadow-sm rounded-2xl overflow-hidden flex flex-col transition-all group">
                                                 {/* Card body */}
@@ -264,14 +234,14 @@ export default function BrowsePage() {
                     </AnimatePresence>
 
                     {/* Load More Button */}
-                    {hasMore && (
+                    {!isReachingEnd && (
                         <div className="mt-10 flex justify-center">
                             <button
                                 onClick={handleLoadMore}
-                                disabled={loadingMore}
+                                disabled={isLoadingMore}
                                 className="px-6 py-3 bg-white border border-gray-200 hover:border-accent text-gray-500 hover:text-accent font-sans text-sm font-medium rounded-full shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
-                                {loadingMore ? (
+                                {isLoadingMore ? (
                                     <>
                                         <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                                         Loading...
