@@ -27,7 +27,7 @@ export async function GET() {
         while (true) {
             const { data, error } = await supabase
                 .from('capsules')
-                .select('track_name, polaroid_downloads, email_sent')
+                .select('track_name, polaroid_downloads, letterify_downloads, email_sent')
                 .range(from, from + step - 1);
 
             if (error || !data || data.length === 0) break;
@@ -41,9 +41,11 @@ export async function GET() {
         const uniqueSongs = new Set(allSongs.map((r: { track_name: string }) => r.track_name)).size;
 
         let polaroidDownloads = 0;
+        let letterifyDownloads = 0;
         let secretEmailsSent = 0;
-        allSongs.forEach((r: { polaroid_downloads?: number, email_sent?: boolean }) => {
+        allSongs.forEach((r: { polaroid_downloads?: number, letterify_downloads?: number, email_sent?: boolean }) => {
             polaroidDownloads += (r.polaroid_downloads || 0);
+            letterifyDownloads += (r.letterify_downloads || 0);
             if (r.email_sent) secretEmailsSent++;
         });
 
@@ -53,6 +55,7 @@ export async function GET() {
             private: privateCapsules,
             uniqueSongs,
             polaroidDownloads,
+            letterifyDownloads,
             secretEmailsSent,
         });
     } catch (err) {

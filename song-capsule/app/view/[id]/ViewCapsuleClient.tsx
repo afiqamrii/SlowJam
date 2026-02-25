@@ -206,7 +206,7 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
     const handleLetterExport = useCallback(async () => {
         if (!capsule) return;
 
-        supabase.rpc('increment_polaroid_downloads', { target_capsule_id: capsule.id })
+        supabase.rpc('increment_letterify_downloads', { target_capsule_id: capsule.id })
             .then(({ error }) => {
                 if (error) console.error('Error incrementing letter downloads:', error);
             });
@@ -706,7 +706,7 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                                             disabled={!canUseOriginalForPolaroid}
                                                             title={!canUseOriginalForPolaroid ? "Original message exceeds 500 chars" : ""}
                                                             className={`flex-1 py-2 px-3 rounded-xl text-xs font-sans font-semibold border-2 transition-all ${!canUseOriginalForPolaroid ? 'opacity-40 cursor-not-allowed border-border text-gray-400' :
-                                                                    !usingSongMeaning ? 'border-accent bg-accent/10 text-accent' : 'border-border text-gray-400 hover:border-accent/40'
+                                                                !usingSongMeaning ? 'border-accent bg-accent/10 text-accent' : 'border-border text-gray-400 hover:border-accent/40'
                                                                 }`}
                                                         >
                                                             ✍️ Original message
@@ -716,7 +716,7 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                                             disabled={!canUseMeaningForPolaroid}
                                                             title={!canUseMeaningForPolaroid ? "Song story exceeds 500 chars" : ""}
                                                             className={`flex-1 py-2 px-3 rounded-xl text-xs font-sans font-semibold border-2 transition-all ${!canUseMeaningForPolaroid ? 'opacity-40 cursor-not-allowed border-border text-gray-400' :
-                                                                    usingSongMeaning ? 'border-accent bg-accent/10 text-accent' : 'border-border text-gray-400 hover:border-accent/40'
+                                                                usingSongMeaning ? 'border-accent bg-accent/10 text-accent' : 'border-border text-gray-400 hover:border-accent/40'
                                                                 }`}
                                                         >
                                                             🎵 AI song story

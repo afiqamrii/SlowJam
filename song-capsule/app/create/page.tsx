@@ -200,7 +200,7 @@ export default function CreateCapsule() {
     const handleLetterExport = useCallback(async () => {
         if (!selectedTrack || !capsuleId) return;
 
-        supabase.rpc('increment_polaroid_downloads', { target_capsule_id: capsuleId })
+        supabase.rpc('increment_letterify_downloads', { target_capsule_id: capsuleId })
             .then(({ error }) => {
                 if (error) console.error('Error incrementing letter downloads:', error);
             });
