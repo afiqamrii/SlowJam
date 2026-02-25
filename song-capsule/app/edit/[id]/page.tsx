@@ -257,11 +257,11 @@ export default function EditCapsulePage() {
                     <textarea
                         value={message}
                         onChange={e => setMessage(e.target.value)}
-                        maxLength={500}
+                        maxLength={1200}
                         rows={6}
                         className="w-full bg-white border border-[var(--border)] rounded-2xl py-4 px-5 text-foreground placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] font-sans shadow-sm resize-none"
                     />
-                    <p className="text-xs text-gray-400 font-sans text-right">{message.length}/500</p>
+                    <p className="text-xs text-gray-400 font-sans text-right">{message.length}/1200</p>
                 </motion.div>
 
                 {/* Unlock date */}

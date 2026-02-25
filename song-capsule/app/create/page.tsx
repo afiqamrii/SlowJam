@@ -17,6 +17,8 @@ import ExportButton from '@/app/components/polaroid/ExportButton';
 import { useImageProcessing } from '@/app/hooks/useImageProcessing';
 import { useCanvasExport } from '@/app/hooks/useCanvasExport';
 import type { ExportFormat } from '@/app/lib/canvasRenderer';
+import { useLetterExport } from '@/app/hooks/useLetterExport';
+import LetterCard from '@/app/components/letter/LetterCard';
 
 export default function CreateCapsule() {
     const router = useRouter();
@@ -40,12 +42,44 @@ export default function CreateCapsule() {
     const [shareToken, setShareToken] = useState<string | null>(null);
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
+    const [aiSongMeaning, setAiSongMeaning] = useState<string | null>(null);
+    const [usingSongMeaning, setUsingSongMeaning] = useState(false);
+    const activeMessage = usingSongMeaning && aiSongMeaning ? aiSongMeaning : message;
+
+
     // ── Polaroid state ────────────────────────────────────────────────────────
     const [showPolaroid, setShowPolaroid] = useState(false);
+    const [creationType, setCreationType] = useState<'polaroid' | 'letter'>('polaroid');
+
+    // ── Enforce content limits for Polaroid ─────────────────────────────────
+    const canUseOriginalForPolaroid = message.length <= 500;
+    const canUseMeaningForPolaroid = !!aiSongMeaning && aiSongMeaning.length <= 500;
+    const canUsePolaroid = canUseOriginalForPolaroid || canUseMeaningForPolaroid;
+
+    useEffect(() => {
+        if (creationType === 'polaroid') {
+            if (!canUsePolaroid) {
+                setCreationType('letter');
+            } else if (activeMessage && activeMessage.length > 500) {
+                // The current selection exceeds the limit. Auto-switch if the alternative is valid.
+                if (canUseOriginalForPolaroid && usingSongMeaning) {
+                    setUsingSongMeaning(false);
+                } else if (canUseMeaningForPolaroid && !usingSongMeaning) {
+                    setUsingSongMeaning(true);
+                }
+            }
+        }
+    }, [activeMessage, creationType, canUsePolaroid, canUseMeaningForPolaroid, canUseOriginalForPolaroid, usingSongMeaning]);
+
+    const [letterBg, setLetterBg] = useState<string>('/letter_backgrounds/bg1.jpg');
+    const letterBackgrounds = ['/letter_backgrounds/bg1.jpg', '/letter_backgrounds/bg2.jpg', '/letter_backgrounds/bg3.jpg', '/letter_backgrounds/bg4.jpg', '/letter_backgrounds/bg5.jpg', '/letter_backgrounds/bg6.jpg'];
+    const [signOff, setSignOff] = useState('With love,');
+    const [senderName, setSenderName] = useState('Me');
     const [format, setFormat] = useState<ExportFormat>('ig');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const imgProc = useImageProcessing();
     const { isExporting, exportPNG } = useCanvasExport();
+    const { isExporting: isLetterExporting, exportPNG: exportLetterPNG } = useLetterExport();
 
     useEffect(() => {
         const handleResize = () => {
@@ -156,11 +190,33 @@ export default function CreateCapsule() {
             trackName: selectedTrack.name,
             artistName: selectedTrack.artists[0].name,
             albumArtUrl: selectedTrack.album.images[0]?.url ?? '',
-            message: message ?? '',
+            message: activeMessage ?? '',
             receiverName: receiverName,
             format,
         });
-    }, [imgProc.processedCanvas, selectedTrack, message, receiverName, exportPNG, format, capsuleId]);
+    }, [imgProc.processedCanvas, selectedTrack, activeMessage, receiverName, exportPNG, format, capsuleId]);
+
+    // ── Letter Export handler ───────────────────────────────────────────────
+    const handleLetterExport = useCallback(async () => {
+        if (!selectedTrack || !capsuleId) return;
+
+        supabase.rpc('increment_polaroid_downloads', { target_capsule_id: capsuleId })
+            .then(({ error }) => {
+                if (error) console.error('Error incrementing letter downloads:', error);
+            });
+
+        await exportLetterPNG({
+            bgImageSrc: letterBg,
+            trackName: selectedTrack.name,
+            artistName: selectedTrack.artists[0].name,
+            albumArtUrl: selectedTrack.album?.images?.[0]?.url,
+            message: activeMessage ?? '',
+            receiverName: receiverName,
+            signOff,
+            senderName,
+            format,
+        });
+    }, [selectedTrack, activeMessage, receiverName, signOff, senderName, exportLetterPNG, format, capsuleId, letterBg]);
 
     // ── Image upload handler ────────────────────────────────────────────────
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,6 +257,7 @@ export default function CreateCapsule() {
                     const aiData = await aiRes.json();
                     if (aiData.meaning) {
                         aiMeaning = aiData.meaning;
+                        setAiSongMeaning(aiMeaning);
                     }
                 }
             } catch (aiErr) {
@@ -323,7 +380,7 @@ export default function CreateCapsule() {
                         {step > 0 && (
                             <button
                                 onClick={prevStep}
-                                className="flex items-center gap-1 text-sm text-gray-500 hover:text-[var(--accent)] transition-colors"
+                                className="flex items-center gap-1 text-sm text-gray-500 hover:text-accent transition-colors"
                             >
                                 <ChevronLeft size={16} /> Back
                             </button>
@@ -372,7 +429,7 @@ export default function CreateCapsule() {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.97 }}
                             onClick={() => handlePrivacyChoice('private')}
-                            className="w-full group relative overflow-hidden rounded-2xl border-2 border-[var(--border)] bg-gradient-to-br from-[var(--accent)]/8 to-[var(--accent-secondary)]/8 p-6 text-left transition-all hover:border-[var(--accent)] hover:shadow-lg"
+                            className="w-full group relative overflow-hidden rounded-2xl border-2 border-[var(--border)] bg-gradient-to-br from-[var(--accent)]/8 to-[var(--accent-secondary)]/8 p-6 text-left transition-all hover:border-accent hover:shadow-lg"
                         >
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-secondary)] flex items-center justify-center shadow-md shrink-0">
@@ -383,8 +440,8 @@ export default function CreateCapsule() {
                                     <p className="text-sm text-gray-500 font-sans">Only visible to you — requires sign in and only people with the unique link can view it.</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
-                                    <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-sans font-semibold">Free</span>
-                                    <ArrowRight size={20} className="text-[var(--accent)] opacity-60 group-hover:opacity-100 transition-opacity" />
+                                    <span className="text-xs bg-[var(--accent)]/10 text-accent px-2 py-0.5 rounded-full font-sans font-semibold">Free</span>
+                                    <ArrowRight size={20} className="text-accent opacity-60 group-hover:opacity-100 transition-opacity" />
                                 </div>
                             </div>
                             {user && (
@@ -449,7 +506,7 @@ export default function CreateCapsule() {
                                         >
                                             <div className="p-4">
                                                 <div className="relative">
-                                                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--accent)] pointer-events-none">
+                                                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-accent pointer-events-none">
                                                         <Mail size={20} />
                                                     </div>
                                                     <input
@@ -507,7 +564,7 @@ export default function CreateCapsule() {
                                         setSelectedTrack(track);
                                         nextStep();
                                     }}
-                                    className="flex items-center gap-4 p-3 hover:bg-[var(--accent)]/10 rounded-xl cursor-pointer transition-colors bg-white border border-transparent hover:border-[var(--accent)]/20"
+                                    className="flex items-center gap-4 p-3 hover:bg-[var(--accent)]/10 rounded-xl cursor-pointer transition-colors bg-white border border-transparent hover:border-accent/20"
                                 >
                                     <img
                                         src={track.album.images[2]?.url}
@@ -540,18 +597,25 @@ export default function CreateCapsule() {
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
                             placeholder={`Say something to ${receiverName}...`}
-                            maxLength={500}
+                            maxLength={1200}
                             className="w-full h-64 bg-white border border-[var(--border)] rounded-2xl p-6 text-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] resize-none font-sans shadow-sm"
                         />
-                        <div className="flex justify-between items-center text-sm text-gray-400">
-                            <span>{message.length}/500</span>
-                            <button
-                                onClick={nextStep}
-                                disabled={!message.trim()}
-                                className="px-8 py-3 bg-[var(--accent)] text-white rounded-full font-bold hover:bg-[#c0684b] disabled:opacity-50 transition-colors"
-                            >
-                                Next
-                            </button>
+                        <div className="flex flex-col gap-1 w-full text-sm text-gray-400">
+                            <div className="flex justify-between items-center w-full">
+                                <span>{message.length}/1200</span>
+                                <button
+                                    onClick={nextStep}
+                                    disabled={!message.trim()}
+                                    className="px-8 py-3 bg-[var(--accent)] text-white rounded-full font-bold hover:bg-[#c0684b] disabled:opacity-50 transition-colors"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                            {message.length > 500 && (
+                                <p className="text-amber-600 text-xs font-medium text-left mt-1">
+                                    Messages over 500 characters will only be available as Letters (Polaroids are limited to 500 characters).
+                                </p>
+                            )}
                         </div>
                     </motion.div>
                 )}
@@ -599,7 +663,7 @@ export default function CreateCapsule() {
                         <div className="w-full rounded-2xl border-2 border-[var(--border)] bg-white shadow-sm overflow-hidden">
                             <div className="h-1.5 w-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-secondary)]" />
                             <div className="p-6 space-y-5">
-                                <div className="flex items-center gap-3 text-[var(--accent)]">
+                                <div className="flex items-center gap-3 text-accent">
                                     <Calendar size={22} />
                                     <span className="font-bold text-base text-[var(--foreground)]">Pick a Date & Time</span>
                                 </div>
@@ -689,7 +753,7 @@ export default function CreateCapsule() {
                             {/* Privacy badge */}
                             <div className="self-end">
                                 {isPrivate ? (
-                                    <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-[var(--accent)]/10 text-[var(--accent)] rounded-full font-sans font-semibold">
+                                    <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-[var(--accent)]/10 text-accent rounded-full font-sans font-semibold">
                                         <Lock size={11} /> Private
                                     </span>
                                 ) : (
@@ -773,7 +837,7 @@ export default function CreateCapsule() {
                             </p>
 
                             {isPrivate && (
-                                <div className="flex items-center gap-2 text-sm text-[var(--accent)] bg-[var(--accent)]/8 px-4 py-2 rounded-full font-sans">
+                                <div className="flex items-center gap-2 text-sm text-accent bg-(--accent)/ px-4 py-2 rounded-full font-sans">
                                     <Lock size={14} /> This capsule is private — only you can see it
                                 </div>
                             )}
@@ -792,9 +856,9 @@ export default function CreateCapsule() {
 
                             {/* Show Add to Calendar prompt if the user scheduled this capsule */}
                             {!sendNow && unlockDate && (
-                                <div className="w-full bg-[var(--accent)]/5 border border-[var(--accent)]/20 p-5 rounded-2xl mt-2 text-left space-y-3">
+                                <div className="w-full bg-[var(--accent)]/5 border border-accent/20 p-5 rounded-2xl mt-2 text-left space-y-3">
                                     <div className="flex items-start gap-3">
-                                        <div className="bg-white p-2 rounded-lg shadow-sm text-[var(--accent)]">
+                                        <div className="bg-white p-2 rounded-lg shadow-sm text-accent">
                                             <Calendar size={20} />
                                         </div>
                                         <div>
@@ -830,7 +894,7 @@ export default function CreateCapsule() {
                             <div className="flex gap-4 w-full mt-4">
                                 <button
                                     onClick={() => router.push(`/view/${capsuleId}`)}
-                                    className="flex-1 py-3 border-2 border-[var(--accent)] text-[var(--accent)] rounded-xl font-bold hover:bg-[var(--accent)] hover:text-white transition-colors"
+                                    className="flex-1 py-3 border-2 border-accent text-accent rounded-xl font-bold hover:bg-[var(--accent)] hover:text-white transition-colors"
                                 >
                                     View Page
                                 </button>
@@ -842,7 +906,7 @@ export default function CreateCapsule() {
                                 </button>
                             </div>
 
-                            {/* ── Polaroid Section ── */}
+                            {/* ── Keepsake Section (Polaroid / Letter) ── */}
                             <div className="w-full mt-8 bg-white/60 p-6 rounded-3xl border border-border shadow-sm">
                                 <div
                                     className="flex items-center justify-between cursor-pointer"
@@ -853,7 +917,7 @@ export default function CreateCapsule() {
                                             <Camera size={22} />
                                         </div>
                                         <div className="text-left">
-                                            <p className="font-bold text-[var(--foreground)] text-base">Create a Polaroid</p>
+                                            <p className="font-bold text-[var(--foreground)] text-base">Create a Keepsake</p>
                                             <p className="text-sm font-sans text-gray-400 font-semibold tracking-wide uppercase mt-0.5">Save for Stories</p>
                                         </div>
                                     </div>
@@ -870,115 +934,304 @@ export default function CreateCapsule() {
                                         >
                                             <div className="pt-6 border-t border-gray-100 mt-5 space-y-8 text-left">
 
-                                                {/* ── Step 1: Photo ── */}
-                                                <div className="space-y-3">
-                                                    <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
-                                                        1. Add a photo
-                                                    </p>
+                                                {/* ── Format Toggle ── */}
+                                                <div className="flex bg-gray-100 p-1 rounded-xl">
+                                                    <button
+                                                        onClick={() => setCreationType('polaroid')}
+                                                        disabled={!canUsePolaroid}
+                                                        title={!canUsePolaroid ? "Both original message and song story are too long for a Polaroid (max 500 chars)" : "Generate Polaroid"}
+                                                        className={`flex-1 py-2 text-sm font-bold font-sans rounded-lg transition-all ${creationType === 'polaroid' ? 'bg-white text-accent shadow-sm' : 'text-gray-500 hover:text-gray-700'} ${!canUsePolaroid ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        Polaroid
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setCreationType('letter')}
+                                                        className={`flex-1 py-2 text-sm font-bold font-sans rounded-lg transition-all ${creationType === 'letter' ? 'bg-white text-accent shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                    >
+                                                        Letterify
+                                                    </button>
+                                                </div>
 
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        ref={fileInputRef}
-                                                        onChange={handleImageChange}
-                                                        className="hidden"
-                                                    />
+                                                {creationType === 'polaroid' ? (
+                                                    <div className="space-y-8 animate-in fade-in zoom-in-95 duration-200">
+                                                        {/* ── Step 1: Photo ── */}
+                                                        <div className="space-y-3">
+                                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                                1. Add a photo
+                                                            </p>
 
-                                                    {!imgProc.rawSrc ? (
-                                                        <button
-                                                            onClick={() => fileInputRef.current?.click()}
-                                                            className="w-full py-10 rounded-2xl border-2 border-dashed border-gray-200 hover:border-accent hover:bg-accent/5 transition-all flex flex-col items-center justify-center gap-2 group"
-                                                        >
-                                                            <div className="p-3 bg-gray-50 group-hover:bg-accent/10 rounded-full text-gray-400 group-hover:text-accent transition-colors">
-                                                                <ImageIcon size={28} />
-                                                            </div>
-                                                            <span className="font-bold text-gray-500 group-hover:text-accent font-sans">
-                                                                Tap to upload photo
-                                                            </span>
-                                                        </button>
-                                                    ) : (
-                                                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-3">
-                                                            <ImageCropper
-                                                                imageSrc={imgProc.rawSrc}
-                                                                crop={imgProc.crop}
-                                                                zoom={imgProc.zoom}
-                                                                onCropChange={imgProc.setCrop}
-                                                                onZoomChange={imgProc.setZoom}
-                                                                onCropComplete={imgProc.onCropComplete}
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                ref={fileInputRef}
+                                                                onChange={handleImageChange}
+                                                                className="hidden"
                                                             />
-                                                            <button
-                                                                onClick={() => { imgProc.setRawSrc(null); }}
-                                                                className="text-xs text-gray-400 hover:text-accent font-sans transition-colors self-center"
-                                                            >
-                                                                ↩ Change photo
-                                                            </button>
+
+                                                            {!imgProc.rawSrc ? (
+                                                                <button
+                                                                    onClick={() => fileInputRef.current?.click()}
+                                                                    className="w-full py-10 rounded-2xl border-2 border-dashed border-gray-200 hover:border-accent hover:bg-accent/5 transition-all flex flex-col items-center justify-center gap-2 group"
+                                                                >
+                                                                    <div className="p-3 bg-gray-50 group-hover:bg-accent/10 rounded-full text-gray-400 group-hover:text-accent transition-colors">
+                                                                        <ImageIcon size={28} />
+                                                                    </div>
+                                                                    <span className="font-bold text-gray-500 group-hover:text-accent font-sans">
+                                                                        Tap to upload photo
+                                                                    </span>
+                                                                </button>
+                                                            ) : (
+                                                                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-3">
+                                                                    <ImageCropper
+                                                                        imageSrc={imgProc.rawSrc}
+                                                                        crop={imgProc.crop}
+                                                                        zoom={imgProc.zoom}
+                                                                        onCropChange={imgProc.setCrop}
+                                                                        onZoomChange={imgProc.setZoom}
+                                                                        onCropComplete={imgProc.onCropComplete}
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => { imgProc.setRawSrc(null); }}
+                                                                        className="text-xs text-gray-400 hover:text-accent font-sans transition-colors self-center"
+                                                                    >
+                                                                        ↩ Change photo
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                </div>
 
-                                                {/* ── Step 2: Preview ── */}
-                                                <div className="space-y-3">
-                                                    <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
-                                                        2. Preview your card
-                                                    </p>
-                                                    <PolaroidCard
-                                                        croppedImageCanvas={imgProc.processedCanvas}
-                                                        trackName={selectedTrack?.name ?? ''}
-                                                        artistName={selectedTrack?.artists[0]?.name ?? ''}
-                                                        albumArtUrl={selectedTrack?.album.images[0]?.url}
-                                                        message={message}
-                                                        receiverName={receiverName}
-                                                        format={format}
-                                                    />
-                                                </div>
+                                                        {/* ── Step 2: Preview ── */}
+                                                        <div className="space-y-3">
+                                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                                2. Preview your card
+                                                            </p>
+                                                            <PolaroidCard
+                                                                croppedImageCanvas={imgProc.processedCanvas}
+                                                                trackName={selectedTrack?.name ?? ''}
+                                                                artistName={selectedTrack?.artists[0]?.name ?? ''}
+                                                                albumArtUrl={selectedTrack?.album.images[0]?.url}
+                                                                message={activeMessage}
+                                                                receiverName={receiverName}
+                                                                format={format}
+                                                            />
+                                                        </div>
 
-                                                {/* ── Step 3: Download ── */}
-                                                <div className="space-y-4">
-                                                    <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
-                                                        3. Choose format & download
-                                                    </p>
+                                                        {/* ── Step 3: Download ── */}
+                                                        <div className="space-y-4">
+                                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                                3. Choose format & download
+                                                            </p>
 
-                                                    <div className="flex gap-3">
-                                                        <button
-                                                            onClick={() => setFormat('ig')}
-                                                            className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl border-2 transition-all ${format === 'ig'
-                                                                ? 'border-accent bg-accent/8 text-accent'
-                                                                : 'border-border text-gray-400 hover:border-accent/50'
-                                                                }`}
-                                                        >
-                                                            <span className="text-xs font-bold font-sans">Instagram</span>
-                                                            <span className="text-[10px] font-sans opacity-70">1080 × 1350</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setFormat('tiktok')}
-                                                            className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl border-2 transition-all ${format === 'tiktok'
-                                                                ? 'border-accent bg-accent/8 text-accent'
-                                                                : 'border-border text-gray-400 hover:border-accent/50'
-                                                                }`}
-                                                        >
-                                                            <span className="text-xs font-bold font-sans">TikTok</span>
-                                                            <span className="text-[10px] font-sans opacity-70">1080 × 1920</span>
-                                                        </button>
+                                                            <div className="flex gap-3">
+                                                                <button
+                                                                    onClick={() => setFormat('ig')}
+                                                                    className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl border-2 transition-all ${format === 'ig'
+                                                                        ? 'border-accent bg-accent/8 text-accent'
+                                                                        : 'border-border text-gray-400 hover:border-accent/50'
+                                                                        }`}
+                                                                >
+                                                                    <span className="text-xs font-bold font-sans">Instagram</span>
+                                                                    <span className="text-[10px] font-sans opacity-70">1080 × 1350</span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setFormat('tiktok')}
+                                                                    className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl border-2 transition-all ${format === 'tiktok'
+                                                                        ? 'border-accent bg-accent/8 text-accent'
+                                                                        : 'border-border text-gray-400 hover:border-accent/50'
+                                                                        }`}
+                                                                >
+                                                                    <span className="text-xs font-bold font-sans">TikTok</span>
+                                                                    <span className="text-[10px] font-sans opacity-70">1080 × 1920</span>
+                                                                </button>
+                                                            </div>
+
+                                                            <ExportButton
+                                                                onClick={handleExport}
+                                                                isExporting={isExporting}
+                                                                disabled={!imgProc.processedCanvas}
+                                                            />
+                                                            {!imgProc.rawSrc && (
+                                                                <p className="text-xs text-gray-400 font-sans text-center">Upload a photo first to enable download.</p>
+                                                            )}
+                                                        </div>
                                                     </div>
+                                                ) : (
+                                                    <div className="space-y-8 animate-in fade-in zoom-in-95 duration-200">
+                                                        {/* ── Step 1: Background ── */}
+                                                        <div className="space-y-3">
+                                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                                1. Choose a background
+                                                            </p>
+                                                            <div className="grid grid-cols-3 gap-3">
+                                                                {letterBackgrounds.map((bg) => (
+                                                                    <button
+                                                                        key={bg}
+                                                                        onClick={() => setLetterBg(bg)}
+                                                                        className={`relative aspect-9/16 rounded-xl overflow-hidden border-2 transition-all hover:scale-105 ${letterBg === bg ? 'border-accent shadow-md' : 'border-transparent'}`}
+                                                                    >
+                                                                        <img src={bg} alt="Letter Background" className="w-full h-full object-cover" />
+                                                                        {letterBg === bg && (
+                                                                            <div className="absolute inset-0 bg-(--accent)/ mix-blend-multiply" />
+                                                                        )}
+                                                                        {letterBg === bg && (
+                                                                            <div className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow-sm text-accent">
+                                                                                <Check size={14} strokeWidth={3} />
+                                                                            </div>
+                                                                        )}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
 
-                                                    <ExportButton
-                                                        onClick={handleExport}
-                                                        isExporting={isExporting}
-                                                        disabled={!imgProc.processedCanvas}
-                                                    />
-                                                    {!imgProc.rawSrc && (
-                                                        <p className="text-xs text-gray-400 font-sans text-center">Upload a photo first to enable download.</p>
-                                                    )}
-                                                </div>
+                                                            {/* ── Custom Color Picker ── */}
+                                                            <div className="pt-2">
+                                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest font-sans mb-3 text-center sm:text-left">Or use a custom solid color</p>
+                                                                <div className="flex gap-3 justify-center sm:justify-start items-center">
+                                                                    {/* Color visual picker */}
+                                                                    <div className="relative w-12 h-12 rounded-xl border-2 border-[var(--border)] overflow-hidden shrink-0 shadow-sm cursor-pointer transition-colors focus-within:border-[var(--accent)] hover:border-[var(--accent)]">
+                                                                        <input
+                                                                            type="color"
+                                                                            value={letterBg.startsWith('#') ? letterBg : '#F9F4EA'}
+                                                                            onChange={(e) => setLetterBg(e.target.value.toUpperCase())}
+                                                                            className="absolute -inset-4 w-20 h-20 cursor-pointer"
+                                                                            title="Choose color"
+                                                                        />
+                                                                    </div>
+                                                                    {/* Hex text input */}
+                                                                    <div className="flex-1 relative max-w-[180px]">
+                                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-sans font-bold">#</span>
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="F9F4EA"
+                                                                            value={letterBg.startsWith('#') ? letterBg.replace('#', '') : ''}
+                                                                            onChange={(e) => {
+                                                                                const val = e.target.value.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                                                                                setLetterBg(val ? `#${val.toUpperCase()}` : '#');
+                                                                            }}
+                                                                            className="w-full pl-8 pr-4 py-3 bg-white border border-[var(--border)] rounded-xl text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[var(--accent)] font-medium text-[var(--foreground)] uppercase shadow-sm"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* ── Step 2: Customize ── */}
+                                                        <div className="space-y-3">
+                                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                                2. Add your Sign-off & Name
+                                                            </p>
+                                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                                <input
+                                                                    type="text"
+                                                                    value={signOff}
+                                                                    onChange={(e) => setSignOff(e.target.value)}
+                                                                    maxLength={30}
+                                                                    placeholder="e.g. Best Regards,"
+                                                                    className="flex-1 px-4 py-3 rounded-xl border border-border focus:border-accent text-sm font-sans outline-none transition-colors w-full"
+                                                                />
+                                                                <input
+                                                                    type="text"
+                                                                    value={senderName}
+                                                                    onChange={(e) => setSenderName(e.target.value)}
+                                                                    maxLength={30}
+                                                                    placeholder="Your Name"
+                                                                    className="flex-1 px-4 py-3 rounded-xl border border-border focus:border-accent text-sm font-sans outline-none transition-colors w-full"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        {/* ── Step 2.5: AI Message Toggle (Letter) ── */}
+                                                        {aiSongMeaning && (
+                                                            <div className="space-y-2">
+                                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest font-sans">✨ Message</p>
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        onClick={() => setUsingSongMeaning(false)}
+                                                                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-sans font-semibold border-2 transition-all ${!usingSongMeaning ? 'border-accent bg-accent/10 text-accent' : 'border-border text-gray-400 hover:border-accent/40'
+                                                                            }`}
+                                                                    >
+                                                                        ✍️ Original message
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setUsingSongMeaning(true)}
+                                                                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-sans font-semibold border-2 transition-all ${usingSongMeaning ? 'border-accent bg-accent/10 text-accent' : 'border-border text-gray-400 hover:border-accent/40'
+                                                                            }`}
+                                                                    >
+                                                                        🎵 AI song story
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* ── Step 3: Preview Letter ── */}
+                                                        <div className="space-y-3">
+                                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                                3. Preview your letter
+                                                            </p>
+                                                            {activeMessage.length < 150 && (
+                                                                <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                                                                    <span className="text-base leading-none mt-0.5">✍️</span>
+                                                                    <p className="text-xs font-sans text-amber-700">
+                                                                        Your message is short — tip: a longer message fills the letter more beautifully!
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                            <LetterCard
+                                                                bgImageSrc={letterBg}
+                                                                trackName={selectedTrack?.name ?? ''}
+                                                                artistName={selectedTrack?.artists[0]?.name ?? ''}
+                                                                albumArtUrl={selectedTrack?.album?.images?.[0]?.url}
+                                                                message={activeMessage}
+                                                                receiverName={receiverName}
+                                                                signOff={signOff}
+                                                                senderName={senderName}
+                                                                format={format}
+                                                            />
+                                                        </div>
+
+                                                        {/* ── Step 4: Download ── */}
+                                                        <div className="space-y-4">
+                                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
+                                                                4. Download your letter
+                                                            </p>
+
+                                                            <motion.button
+                                                                onClick={handleLetterExport}
+                                                                disabled={isLetterExporting}
+                                                                whileTap={{ scale: 0.96 }}
+                                                                whileHover={{ scale: isLetterExporting ? 1 : 1.02 }}
+                                                                className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base transition-all"
+                                                                style={{
+                                                                    background: 'linear-gradient(135deg, #c0836b, #a0634e)',
+                                                                    color: '#fff',
+                                                                    boxShadow: '0 4px 20px rgba(160,99,78,0.4)',
+                                                                    fontFamily: 'var(--font-gloria), cursive',
+                                                                    cursor: isLetterExporting ? 'not-allowed' : 'pointer',
+                                                                    opacity: isLetterExporting ? 0.7 : 1,
+                                                                }}
+                                                            >
+                                                                {isLetterExporting ? (
+                                                                    <>
+                                                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                                        Writing your letter…
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        ✉️ Download Letter
+                                                                    </>
+                                                                )}
+                                                            </motion.button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
-                        </motion.div>
+                        </motion.div >
                     </>
-                )}
-            </AnimatePresence>
-        </div>
+                )
+                }
+            </AnimatePresence >
+        </div >
     );
 }

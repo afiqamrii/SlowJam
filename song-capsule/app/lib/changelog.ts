@@ -8,7 +8,7 @@
 // After bumping, add a new entry at the TOP of RELEASES.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = '1.3.3';
+export const APP_VERSION = '1.4.0';
 
 export interface Release {
     version: string;
@@ -23,6 +23,41 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+    {
+        version: '1.4.0',
+        date: new Date().toISOString().split('T')[0],
+        highlights: [
+            {
+                emoji: '💌',
+                title: 'Cute Letters Format',
+                desc: 'You can now choose to download your memories as a perfectly formatted digital letter! Pick from 6 aesthetic backgrounds or select your own custom solid color.',
+                href: '/create',
+                cta: 'Try it out',
+            },
+            {
+                emoji: '✨',
+                title: 'AI Song Story Enhancements',
+                desc: 'The AI Song Story is now delightfully formatted. Plus, if your message is naturally too long to fit on a Polaroid, the system will smartly use the song story instead!',
+                href: '/create',
+                cta: 'Create one',
+            },
+            {
+                emoji: '✍️',
+                title: 'Write Longer Messages',
+                desc: 'With the new Cute Letters format, you are no longer limited by the Polaroid boundary! Pour your heart out with longer, more detailed messages.',
+                href: '/create',
+                cta: 'Write one now',
+            },
+            {
+                emoji: '💖',
+                title: 'Save Your Favorite Capsules',
+                desc: 'You can now "heart" your favorite capsules to save them as inspiration for later! Find them all neatly organized in your new "Saved" tab, and easily sort the Browse page by Highest Saves.',
+                href: '/saved',
+                cta: 'My capsules',
+            }
+
+        ],
+    },
     {
         version: '1.3.3',
         date: new Date().toISOString().split('T')[0],

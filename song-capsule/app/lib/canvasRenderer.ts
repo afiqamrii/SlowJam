@@ -66,6 +66,82 @@ function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
     ctx.closePath();
 }
 
+// Utility to parse markdown-like bold strings
+// Returns an array of segments: { text: "hello", bold: false }, { text: "world", bold: true }
+function parseBoldSegments(text: string) {
+    const segments: { text: string; bold: boolean }[] = [];
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    for (const part of parts) {
+        if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+            segments.push({ text: part.slice(2, -2), bold: true });
+        } else if (part.length > 0) {
+            segments.push({ text: part, bold: false });
+        }
+    }
+    return segments;
+}
+
+// Measures width of a text composed of mixed bold/normal segments
+function measureMixedText(ctx: CanvasRenderingContext2D, baseFont: string, segments: { text: string; bold: boolean }[]) {
+    ctx.save();
+    let totalW = 0;
+    for (const seg of segments) {
+        ctx.font = seg.bold ? `bold ${baseFont}` : baseFont;
+        totalW += ctx.measureText(seg.text).width;
+    }
+    ctx.restore();
+    return totalW;
+}
+
+function wrapTextWithBold(ctx: CanvasRenderingContext2D, text: string, maxW: number, baseFont: string): string[] {
+    const lines: string[] = [];
+    const cleanText = text.replace(/\s+/g, ' ').trim();
+    if (!cleanText) return [];
+
+    let curLineWords: string[] = [];
+    let curLineText = '';
+
+    for (const word of cleanText.split(' ')) {
+        const testText = curLineText ? `${curLineText} ${word}` : word;
+        const testSegments = parseBoldSegments(testText);
+
+        if (measureMixedText(ctx, baseFont, testSegments) > maxW && curLineText) {
+            lines.push(curLineText);
+            curLineText = word;
+            curLineWords = [word];
+        } else {
+            curLineText = testText;
+            curLineWords.push(word);
+        }
+    }
+    if (curLineText) lines.push(curLineText);
+
+    return lines;
+}
+
+function drawTextWithBold(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, baseFont: string, align: 'left' | 'center' = 'left') {
+    const segments = parseBoldSegments(text);
+
+    ctx.save();
+
+    // Calculate starting X if center aligned
+    let drawX = x;
+    if (align === 'center') {
+        const totalW = measureMixedText(ctx, baseFont, segments);
+        drawX = x - (totalW / 2);
+    }
+
+    ctx.textAlign = 'left'; // Always draw left-to-right when combining segments
+
+    for (const seg of segments) {
+        ctx.font = seg.bold ? `bold ${baseFont}` : baseFont;
+        ctx.fillText(seg.text, drawX, y);
+        drawX += ctx.measureText(seg.text).width;
+    }
+
+    ctx.restore();
+}
+
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
     const lines: string[] = [];
     // Collapse all newlines and multiple spaces into a single space to prevent overflow
@@ -379,16 +455,18 @@ export async function renderPolaroidToCanvas(
 
     // Starting font size based on message length
     let fontSize = message.length > 200 ? 26 : message.length > 100 ? 32 : 38;
-    ctx.font = `${fontSize}px "Gloria Hallelujah", cursive`;
-    let lines = wrapText(ctx, message, msgMaxW);
+    let baseFont = `${fontSize}px "Gloria Hallelujah", cursive`;
+    ctx.font = baseFont;
+    let lines = wrapTextWithBold(ctx, message, msgMaxW, baseFont);
     let lineH = fontSize * 1.65;
     let totalMH = totalTextHeight(lines, lineH);
 
     // Shrink until all lines fit
     while (totalMH > msgAvailH && fontSize > 14) {
         fontSize -= 1;
-        ctx.font = `${fontSize}px "Gloria Hallelujah", cursive`;
-        lines = wrapText(ctx, message, msgMaxW);
+        baseFont = `${fontSize}px "Gloria Hallelujah", cursive`;
+        ctx.font = baseFont;
+        lines = wrapTextWithBold(ctx, message, msgMaxW, baseFont);
         lineH = fontSize * 1.65;
         totalMH = totalTextHeight(lines, lineH);
     }
@@ -396,7 +474,7 @@ export async function renderPolaroidToCanvas(
     // Vertically center in available space
     let ty = curContentY + Math.max(0, (msgAvailH - totalMH) / 2);
     for (const line of lines) {
-        ctx.fillText(line, contentCX, ty);
+        drawTextWithBold(ctx, line, contentCX, ty, baseFont, 'center');
         ty += line === '' ? lineH * 0.5 : lineH;  // blank lines take half height
     }
     ctx.restore();
