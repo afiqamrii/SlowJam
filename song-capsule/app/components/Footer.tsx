@@ -33,12 +33,20 @@ export default function Footer() {
                             </GradientText>
 
                         </div>
-                        <button
-                            onClick={() => setSupportOpen(true)}
-                            className="text-gray-400 hover:text-gray-600 transition-colors font-medium border-l border-gray-200 pl-4"
-                        >
-                            Support & Feedback
-                        </button>
+                        <div className="flex items-center text-gray-400 font-medium border-l border-gray-200 pl-4 space-x-4">
+                            <button
+                                onClick={() => setSupportOpen(true)}
+                                className="hover:text-gray-600 transition-colors"
+                            >
+                                Support
+                            </button>
+                            <a href="/terms-of-service" className="hover:text-gray-600 transition-colors">
+                                Terms
+                            </a>
+                            <a href="/privacy-policy" className="hover:text-gray-600 transition-colors">
+                                Privacy
+                            </a>
+                        </div>
                     </div>
                     <div className="flex flex-col items-center sm:items-end gap-0.5 text-center sm:text-right">
                         <span>
