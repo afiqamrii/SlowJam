@@ -1019,7 +1019,7 @@ export default function CreateCapsule() {
                                                         {/* ── Step 3: Download ── */}
                                                         <div className="space-y-4">
                                                             <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
-                                                                3. Choose format & download
+                                                                3. Choose format & save
                                                             </p>
 
                                                             <div className="flex gap-3">
@@ -1051,7 +1051,7 @@ export default function CreateCapsule() {
                                                                 disabled={!imgProc.processedCanvas}
                                                             />
                                                             {!imgProc.rawSrc && (
-                                                                <p className="text-xs text-gray-400 font-sans text-center">Upload a photo first to enable download.</p>
+                                                                <p className="text-xs text-gray-400 font-sans text-center">Upload a photo first to enable saving.</p>
                                                             )}
                                                         </div>
                                                     </div>
@@ -1190,7 +1190,7 @@ export default function CreateCapsule() {
                                                         {/* ── Step 4: Download ── */}
                                                         <div className="space-y-4">
                                                             <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
-                                                                4. Download your letter
+                                                                4. Save your letter
                                                             </p>
 
                                                             <motion.button
@@ -1215,7 +1215,7 @@ export default function CreateCapsule() {
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        ✉️ Download Letter
+                                                                        ✉️ Save Letter Image
                                                                     </>
                                                                 )}
                                                             </motion.button>

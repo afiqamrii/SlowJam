@@ -21,7 +21,7 @@ export default function ExportButton({ onClick, isExporting, disabled }: ExportB
             disabled={disabled || isExporting}
             whileTap={{ scale: 0.96 }}
             whileHover={{ scale: disabled ? 1 : 1.02 }}
-            className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base transition-all"
+            className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base transition-all my-4"
             style={{
                 background: disabled
                     ? '#c8b89a'
@@ -41,7 +41,7 @@ export default function ExportButton({ onClick, isExporting, disabled }: ExportB
             ) : (
                 <>
                     <Download size={20} />
-                    Download Polaroid Card
+                    Save Polaroid Image
                 </>
             )}
         </motion.button>

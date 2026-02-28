@@ -749,7 +749,7 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                             {/* ── Step 3: Download ── */}
                                             <div className="space-y-4">
                                                 <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
-                                                    3. Choose format & download
+                                                    3. Choose format & save
                                                 </p>
 
                                                 {/* Format picker */}
@@ -936,7 +936,7 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                             {/* ── Step 4: Download ── */}
                                             <div className="space-y-4">
                                                 <p className="text-sm font-bold text-gray-500 uppercase tracking-widest font-sans">
-                                                    4. Download your letter
+                                                    4. Save your letter
                                                 </p>
 
                                                 <motion.button
@@ -944,7 +944,7 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                                     disabled={isLetterExporting}
                                                     whileTap={{ scale: 0.96 }}
                                                     whileHover={{ scale: isLetterExporting ? 1 : 1.02 }}
-                                                    className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base transition-all"
+                                                    className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base transition-all my-4"
                                                     style={{
                                                         background: 'linear-gradient(135deg, #c0836b, #a0634e)',
                                                         color: '#fff',
@@ -961,7 +961,7 @@ export default function ViewCapsuleClient({ capsule, isShareAuthorized = false }
                                                         </>
                                                     ) : (
                                                         <>
-                                                            ✉️ Download Letter
+                                                            ✉️ Save Letter Image
                                                         </>
                                                     )}
                                                 </motion.button>
